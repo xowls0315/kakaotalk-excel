@@ -7,7 +7,9 @@ interface UploadDropzoneProps {
   onUploadSuccess?: (file: File) => void;
 }
 
-export default function UploadDropzone({ onUploadSuccess }: UploadDropzoneProps) {
+export default function UploadDropzone({
+  onUploadSuccess,
+}: UploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function UploadDropzone({ onUploadSuccess }: UploadDropzoneProps)
           const content = e.target?.result as string;
           sessionStorage.setItem("uploadedFile", content);
           sessionStorage.setItem("uploadedFileName", file.name);
-          
+
           onUploadSuccess?.(file);
           router.push("/preview");
         };
@@ -105,13 +107,12 @@ export default function UploadDropzone({ onUploadSuccess }: UploadDropzoneProps)
           id="file-upload"
           disabled={isUploading}
         />
-        <label
-          htmlFor="file-upload"
-          className="cursor-pointer"
-        >
+        <label htmlFor="file-upload" className="cursor-pointer">
           <div className="mb-4 text-6xl">📤</div>
           <h3 className="mb-2 text-xl font-semibold text-gray-900">
-            {isUploading ? "업로드 중..." : "파일을 드래그하거나 클릭하여 업로드"}
+            {isUploading
+              ? "업로드 중..."
+              : "파일을 드래그하거나 클릭하여 업로드"}
           </h3>
           <p className="text-sm text-gray-600">
             카카오톡에서 내보낸 .txt 파일만 업로드 가능합니다
@@ -132,4 +133,3 @@ export default function UploadDropzone({ onUploadSuccess }: UploadDropzoneProps)
     </div>
   );
 }
-
