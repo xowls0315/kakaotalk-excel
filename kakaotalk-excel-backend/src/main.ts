@@ -16,8 +16,23 @@ async function bootstrap() {
 
   // CORS 설정
   const frontendUrl = configService.get<string>('app.frontendUrl');
+  const nodeEnv = configService.get<string>('app.nodeEnv');
+
+  // CORS 허용 origin 목록
+  const allowedOrigins: string[] = [];
+
+  // 프론트엔드 URL이 있으면 추가
+  if (frontendUrl && !frontendUrl.includes('localhost')) {
+    allowedOrigins.push(frontendUrl);
+  }
+
+  // 프로덕션 환경에서는 Swagger UI도 허용 (현재 서버 URL)
+  if (nodeEnv === 'production') {
+    allowedOrigins.push('https://kakaotalk-excel-backend.onrender.com');
+  }
+
   app.enableCors({
-    origin: frontendUrl,
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true, // 개발 환경에서는 모든 origin 허용
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -71,7 +86,10 @@ async function bootstrap() {
       'JWT-auth', // 이 이름을 컨트롤러에서 사용
     )
     .addServer('http://localhost:3001', '로컬 개발 서버')
-    .addServer('https://your-production-url.com', '프로덕션 서버')
+    .addServer(
+      'https://kakaotalk-excel-backend.onrender.com',
+      '프로덕션 서버 (Render)',
+    )
     .addTag('Health', '서버 상태 확인')
     .addTag('Auth', '인증 관련 API (카카오 로그인, 토큰 관리)')
     .addTag('Convert', '파일 변환 API (게스트/로그인 사용자 공통)')
