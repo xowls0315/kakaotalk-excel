@@ -1,18 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { Message, useConvertStore } from "@/store/useConvertStore";
 
 interface PreviewTableProps {
   messages: Message[];
 }
 
+const INITIAL_DISPLAY_COUNT = 10;
+const LOAD_MORE_COUNT = 5;
+
 export default function PreviewTable({ messages }: PreviewTableProps) {
   const { options } = useConvertStore();
+  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY_COUNT);
   const showDate = options.showDate ?? true;
   const showTime = options.showTime ?? true;
   const showSender = options.showSender ?? true;
   const showType = options.showType ?? true;
   const showContent = options.showContent ?? true;
+
+  // 표시할 메시지 결정
+  const displayMessages = messages.slice(0, displayCount);
+  const hasMore = messages.length > displayCount;
+  const remainingCount = messages.length - displayCount;
+
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
     const year = date.getFullYear();
@@ -45,6 +56,58 @@ export default function PreviewTable({ messages }: PreviewTableProps) {
       return content;
     }
     return content.slice(0, maxLength) + "...";
+  };
+
+  const renderContent = (content: string) => {
+    // 마커를 아이콘으로 변환
+    if (content.includes("__IMAGE_ICON__")) {
+      const parts = content.split("__IMAGE_ICON__");
+      const result: React.ReactNode[] = [];
+
+      parts.forEach((part, index) => {
+        if (index > 0) {
+          // 아이콘 추가
+          result.push(
+            <i
+              key={`icon-${index}`}
+              className="ri-image-line inline-block mr-1"
+            ></i>
+          );
+        }
+        if (part) {
+          result.push(part);
+        }
+      });
+
+      // 전체 텍스트 길이 확인
+      const fullText = parts.join("");
+      const truncated = truncateContent(fullText);
+
+      // 잘리지 않은 경우 전체 표시
+      if (truncated === fullText) {
+        return <span>{result}</span>;
+      }
+
+      // 잘린 경우: 아이콘은 유지하고 텍스트만 잘라서 표시
+      // 첫 번째 아이콘은 유지하고 나머지 텍스트는 잘라서 표시
+      const iconCount = parts.length - 1;
+      if (iconCount > 0 && result.length > 0) {
+        // 아이콘과 일부 텍스트만 표시
+        const textWithoutMarker = fullText.replace(/__IMAGE_ICON__/g, "");
+        const truncatedText = truncateContent(textWithoutMarker);
+        return (
+          <span>
+            <i className="ri-image-line inline-block mr-1"></i>
+            {truncatedText}
+          </span>
+        );
+      }
+
+      return <span>{result}</span>;
+    }
+
+    // 아이콘이 없는 경우
+    return truncateContent(content);
   };
 
   const visibleColumns = [
@@ -88,7 +151,7 @@ export default function PreviewTable({ messages }: PreviewTableProps) {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {messages.length === 0 ? (
+          {displayMessages.length === 0 ? (
             <tr>
               <td
                 colSpan={visibleColumns}
@@ -98,11 +161,11 @@ export default function PreviewTable({ messages }: PreviewTableProps) {
               </td>
             </tr>
           ) : (
-            messages.map((msg) => {
+            displayMessages.map((msg, index) => {
               const msgId = `${msg.timestamp}-${msg.sender}-${msg.content.slice(
                 0,
                 20
-              )}`;
+              )}-${index}`;
               const getRowClassName = () => {
                 if (msg.type === "system") return "bg-gray-50 text-gray-500";
                 if (msg.type === "image") return "bg-blue-50";
@@ -133,7 +196,7 @@ export default function PreviewTable({ messages }: PreviewTableProps) {
                   )}
                   {showContent && (
                     <td className="px-4 py-3 text-gray-700">
-                      {truncateContent(msg.content)}
+                      {renderContent(msg.content)}
                     </td>
                   )}
                 </tr>
@@ -142,6 +205,51 @@ export default function PreviewTable({ messages }: PreviewTableProps) {
           )}
         </tbody>
       </table>
+      {/* 더보기/접기 버튼 - 데이터가 10개 이상일 때만 표시 */}
+      {messages.length > 0 &&
+        messages.length >= INITIAL_DISPLAY_COUNT &&
+        (hasMore || displayCount > INITIAL_DISPLAY_COUNT) && (
+          <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
+            <div className="flex items-center justify-center gap-8">
+              {hasMore && (
+                <button
+                  onClick={() =>
+                    setDisplayCount((prev) => prev + LOAD_MORE_COUNT)
+                  }
+                  className="
+                    rounded-lg
+                    px-4 py-2
+                    text-sm
+                    font-medium
+                    text-[#3FAF8E]
+                    transition
+                    hover:bg-[#fff0b0]
+                    hover:text-[#2F2F2F]
+                  "
+                >
+                  더보기 ({Math.min(LOAD_MORE_COUNT, remainingCount)}개 더)
+                </button>
+              )}
+              {displayCount > INITIAL_DISPLAY_COUNT && (
+                <button
+                  onClick={() => setDisplayCount(INITIAL_DISPLAY_COUNT)}
+                  className="
+                    rounded-lg
+                    px-4 py-2
+                    text-sm
+                    font-medium
+                    text-[#3FAF8E]
+                    transition
+                    hover:bg-[#fff0b0]
+                    hover:text-[#2F2F2F]
+                  "
+                >
+                  접기
+                </button>
+              )}
+            </div>
+          </div>
+        )}
     </div>
   );
 }

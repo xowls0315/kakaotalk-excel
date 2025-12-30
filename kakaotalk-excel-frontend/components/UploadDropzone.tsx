@@ -94,10 +94,9 @@ export default function UploadDropzone({
           rounded-2xl
           border-2
           border-dashed
-          p-6
+          p-12
           text-center
           transition
-          sm:p-12
           ${
             isDragging
               ? "border-[#3FAF8E] bg-[#EAF7F2]"
@@ -116,15 +115,15 @@ export default function UploadDropzone({
         />
 
         <label htmlFor="file-upload" className="cursor-pointer">
-          <div className="mb-3 text-4xl sm:mb-4 sm:text-6xl">📤</div>
+          <div className="mb-4 text-6xl">📤</div>
 
-          <h3 className="mb-2 text-base font-semibold text-[#2F2F2F] sm:text-xl">
+          <h3 className="mb-2 text-xl font-semibold text-[#2F2F2F]">
             {isUploading
               ? "잠시만요, 파일 읽는 중이에요…"
               : "여기에 파일을 끌어오거나 눌러서 선택하세요"}
           </h3>
 
-          <p className="text-xs text-gray-600 sm:text-sm">
+          <p className="text-sm text-gray-600">
             카카오톡에서 내보낸 <strong>.txt</strong> 파일이면 바로 돼요
           </p>
 

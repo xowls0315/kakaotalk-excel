@@ -5,58 +5,113 @@ import { getLoginUrl } from "@/lib/auth";
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-[#FFFEF8] dark:bg-[#0F1411] flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[#FBE27A] bg-white p-8 text-center
-                      dark:border-[#E6C85C] dark:bg-[#161B17]">
-        {/* Title */}
-        <h1 className="mb-4 text-2xl font-bold text-[#2F2F2F] dark:text-[#E6EDE8]">
-          로그인
-        </h1>
-
-        <p className="mb-8 text-sm text-gray-600 dark:text-gray-400">
-          로그인하면 변환 기록을 저장하고
-          <br />
-          언제든지 다시 다운로드할 수 있어요.
-        </p>
-
-        {/* Login CTA */}
-        <a
-          href={getLoginUrl()}
-          className="
-            block
-            w-full
-            rounded-lg
-            bg-[#FBE27A]
-            px-6 py-3
-            font-semibold
-            text-[#2F2F2F]
-            transition
-            hover:bg-[#F5D96B]
-            dark:bg-[#E6C85C]
-            dark:text-[#0F1411]
-            dark:hover:bg-[#D9B94F]
-          "
-        >
-          카카오로 로그인
-        </a>
-
-        {/* Divider */}
-        <div className="my-6 flex items-center gap-2">
-          <div className="h-px flex-1 bg-gray-200 dark:bg-[#1E2621]" />
-          <span className="text-xs text-gray-400">또는</span>
-          <div className="h-px flex-1 bg-gray-200 dark:bg-[#1E2621]" />
+    <div className="min-h-screen bg-[#FFFEF8] dark:bg-[#0F1411] flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Logo/Title */}
+        <div className="mb-8 text-center">
+          <Link
+            href="/"
+            className="inline-block mb-4 text-2xl font-bold text-[#2F2F2F] dark:text-[#E6EDE8] hover:text-[#3FAF8E] transition"
+          >
+            Talk to Excel
+          </Link>
         </div>
 
-        {/* Back */}
-        <Link
-          href="/"
-          className="text-sm text-gray-600 hover:text-[#2F2F2F] hover:underline
-                     dark:text-gray-400 dark:hover:text-[#E6EDE8]"
-        >
-          홈으로 돌아가기
-        </Link>
+        {/* Login Card */}
+        <div className="rounded-2xl border border-[#FBE27A] bg-white p-8 text-center dark:border-[#E6C85C] dark:bg-[#161B17] shadow-lg">
+          {/* Benefits */}
+          <div className="mb-8 space-y-4 text-left">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex-shrink-0">
+                <i className="ri-save-line text-xl text-[#3FAF8E]"></i>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#2F2F2F] dark:text-[#E6EDE8]">
+                  변환 기록 저장
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  변환한 파일을 저장해두고 나중에 다시 다운로드할 수 있어요
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex-shrink-0">
+                <i className="ri-history-line text-xl text-[#3FAF8E]"></i>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#2F2F2F] dark:text-[#E6EDE8]">
+                  내 기록 관리
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  언제 변환했는지, 어떤 파일인지 한눈에 확인할 수 있어요
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex-shrink-0">
+                <i className="ri-shield-check-line text-xl text-[#3FAF8E]"></i>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#2F2F2F] dark:text-[#E6EDE8]">
+                  안전한 보관
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  카카오 계정으로 간편하게 로그인하고 안전하게 보관해요
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="my-6 flex items-center gap-2">
+            <div className="h-px flex-1 bg-gray-200 dark:bg-[#1E2621]" />
+            <span className="text-xs text-gray-400">로그인 방법</span>
+            <div className="h-px flex-1 bg-gray-200 dark:bg-[#1E2621]" />
+          </div>
+
+          {/* Login Button */}
+          <a
+            href={getLoginUrl()}
+            className="
+              block
+              w-full
+              rounded-lg
+              bg-[#FBE27A]
+              px-6 py-3
+              font-semibold
+              text-[#2F2F2F]
+              transition
+              hover:bg-[#F5D96B]
+              dark:bg-[#E6C85C]
+              dark:text-[#0F1411]
+              dark:hover:bg-[#D9B94F]
+              shadow-md
+              hover:shadow-lg
+            "
+          >
+            <i className="ri-chat-3-line mr-2 text-lg"></i>
+            카카오로 로그인
+          </a>
+
+          {/* Info */}
+          <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+            로그인 없이도 사용할 수 있어요
+          </p>
+        </div>
+
+        {/* Back Link */}
+        <div className="mt-6 text-center">
+          <Link
+            href="/"
+            className="text-sm text-gray-600 hover:text-[#2F2F2F] hover:underline dark:text-gray-400 dark:hover:text-[#E6EDE8] transition"
+          >
+            <i className="ri-arrow-left-line mr-1"></i>
+            홈으로 돌아가기
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
-

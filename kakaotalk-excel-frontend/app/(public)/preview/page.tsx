@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import PreviewTable from "@/components/PreviewTable";
 import FiltersPanel from "@/components/FiltersPanel";
 import { useConvertStore, Message } from "@/store/useConvertStore";
-import { convertMessagesToExcel } from "@/lib/excel";
+import { convertMessagesToExcel, convertMessagesToCSV } from "@/lib/excel";
+import { convertMessagesToPDF } from "@/lib/pdf";
 import { parseKakaoTalkFile } from "@/lib/kakaotalkParser";
 
 /* -------------------- Page -------------------- */
@@ -16,6 +17,9 @@ export default function PreviewPage() {
   const [messages, setMessagesState] = useState<Message[]>([]);
   const [filteredMessages, setFilteredMessages] = useState<Message[]>([]);
   const [isConverting, setIsConverting] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState<"xlsx" | "csv" | "pdf">(
+    "xlsx"
+  );
 
   useEffect(() => {
     const fileContent = sessionStorage.getItem("uploadedFile");
@@ -41,12 +45,27 @@ export default function PreviewPage() {
       const fileName =
         sessionStorage.getItem("uploadedFileName") ?? "kakaotalk-converted.txt";
 
-      let excelFileName = fileName.replace(/\.txt$/i, "");
-      if (!excelFileName.toLowerCase().endsWith(".xlsx")) {
-        excelFileName += ".xlsx";
-      }
+      const baseFileName = fileName.replace(/\.txt$/i, "");
 
-      convertMessagesToExcel(filteredMessages, excelFileName);
+      if (downloadFormat === "xlsx") {
+        let excelFileName = baseFileName;
+        if (!excelFileName.toLowerCase().endsWith(".xlsx")) {
+          excelFileName += ".xlsx";
+        }
+        convertMessagesToExcel(filteredMessages, excelFileName);
+      } else if (downloadFormat === "csv") {
+        let csvFileName = baseFileName;
+        if (!csvFileName.toLowerCase().endsWith(".csv")) {
+          csvFileName += ".csv";
+        }
+        convertMessagesToCSV(filteredMessages, csvFileName);
+      } else if (downloadFormat === "pdf") {
+        let pdfFileName = baseFileName;
+        if (!pdfFileName.toLowerCase().endsWith(".pdf")) {
+          pdfFileName += ".pdf";
+        }
+        convertMessagesToPDF(filteredMessages, pdfFileName);
+      }
 
       setTimeout(() => router.push("/result"), 500);
     } catch {
@@ -54,7 +73,7 @@ export default function PreviewPage() {
     } finally {
       setIsConverting(false);
     }
-  }, [filteredMessages, router]);
+  }, [filteredMessages, router, downloadFormat]);
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 sm:py-16">
@@ -77,6 +96,54 @@ export default function PreviewPage() {
       {/* Table */}
       <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-2 sm:mb-10 sm:p-4">
         <PreviewTable messages={filteredMessages} />
+      </div>
+
+      {/* Format Selection */}
+      <div className="mb-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+        <label className="text-sm font-medium text-gray-700 sm:text-base">
+          파일 형식:
+        </label>
+        <div className="flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => setDownloadFormat("xlsx")}
+            className={`
+              rounded-lg px-3 py-2 text-xs font-medium transition sm:px-4 sm:text-sm
+              ${
+                downloadFormat === "xlsx"
+                  ? "bg-[#FBE27A] text-[#2F2F2F]"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }
+            `}
+          >
+            Excel (.xlsx)
+          </button>
+          <button
+            onClick={() => setDownloadFormat("csv")}
+            className={`
+              rounded-lg px-3 py-2 text-xs font-medium transition sm:px-4 sm:text-sm
+              ${
+                downloadFormat === "csv"
+                  ? "bg-[#FBE27A] text-[#2F2F2F]"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }
+            `}
+          >
+            CSV (.csv)
+          </button>
+          <button
+            onClick={() => setDownloadFormat("pdf")}
+            className={`
+              rounded-lg px-3 py-2 text-xs font-medium transition sm:px-4 sm:text-sm
+              ${
+                downloadFormat === "pdf"
+                  ? "bg-[#FBE27A] text-[#2F2F2F]"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }
+            `}
+          >
+            PDF (.pdf)
+          </button>
+        </div>
       </div>
 
       {/* Actions */}
@@ -119,7 +186,17 @@ export default function PreviewPage() {
             sm:text-base
           "
         >
-          {isConverting ? "엑셀 만드는 중이에요…" : "이제 엑셀로 받아볼게요 !"}
+          {isConverting
+            ? downloadFormat === "xlsx"
+              ? "Excel 만드는 중이에요…"
+              : downloadFormat === "csv"
+              ? "CSV 만드는 중이에요…"
+              : "PDF 만드는 중이에요…"
+            : downloadFormat === "xlsx"
+            ? "이제 Excel로 받아볼게요 !"
+            : downloadFormat === "csv"
+            ? "이제 CSV로 받아볼게요 !"
+            : "이제 PDF로 받아볼게요 !"}
         </button>
       </div>
     </div>

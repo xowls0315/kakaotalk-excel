@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import JobListTable, { Job } from "@/components/JobListTable";
-import { apiGet } from "@/lib/apiClient";
+import { getJobs } from "@/lib/api/jobs";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const loadJobs = async () => {
     try {
       setIsLoadingJobs(true);
-      const data = await apiGet<Job[]>("/jobs");
+      const data = await getJobs();
       setJobs(data);
     } catch (error) {
       console.error("Failed to load jobs:", error);
@@ -71,5 +71,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-

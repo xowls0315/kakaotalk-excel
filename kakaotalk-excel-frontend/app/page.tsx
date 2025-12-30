@@ -2,20 +2,19 @@
 
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
-
 const FEATURES = [
   {
-    icon: "📤",
+    icon: <i className="ri-upload-cloud-2-line"></i>,
     title: "파일 하나만 올리면",
     desc: "카카오톡에서 내보낸 txt 파일을 그대로 올리면 돼요.",
   },
   {
-    icon: "🔍",
+    icon: <i className="ri-filter-3-line"></i>,
     title: "필요한 대화만 골라서",
     desc: "날짜나 참여자 기준으로 메시지를 정리할 수 있어요.",
   },
   {
-    icon: "📊",
+    icon: <i className="ri-file-excel-2-line"></i>,
     title: "엑셀로 정리 끝",
     desc: "복잡한 대화도 엑셀 표로 한 번에 정리돼요.",
   },
@@ -72,7 +71,9 @@ export default function Home() {
                 animationDelay: `${index * 0.2}s`,
               }}
             >
-              <div className="mb-3 text-3xl sm:mb-4">{feature.icon}</div>
+              <div className="mb-3 text-3xl sm:mb-4 flex justify-center items-center">
+                {feature.icon}
+              </div>
               <h3 className="mb-2 text-base font-semibold text-[#2F2F2F] sm:text-lg">
                 {feature.title}
               </h3>

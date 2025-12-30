@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useConvertStore } from "@/store/useConvertStore";
-import { apiPut } from "@/lib/apiClient";
+import { getSettings, updateSettings } from "@/lib/api/settings";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -28,7 +28,11 @@ export default function SettingsPage() {
     setSaveMessage(null);
 
     try {
-      await apiPut("/settings", { defaultOptions: options });
+      await updateSettings({
+        defaultIncludeSystem: options.excludeSystemMessages,
+        defaultSplitSheetsByDay: false, // 필요시 options에서 가져오기
+        defaultDateRangeDays: 30, // 필요시 계산
+      });
       setSaveMessage("설정이 저장되었습니다.");
       
       // 메시지 3초 후 제거

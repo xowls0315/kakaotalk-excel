@@ -3,26 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
-import { apiGet } from "@/lib/apiClient";
-import { downloadFile } from "@/lib/download";
+import { getJob, downloadJob, JobDetail } from "@/lib/api/jobs";
+import { downloadBlob } from "@/lib/download";
 import { JOB_STATUS, JobStatus } from "@/lib/constants";
 import Link from "next/link";
-
-interface JobDetail {
-  id: string;
-  status: JobStatus;
-  createdAt: string;
-  expiresAt?: string;
-  downloadUrl?: string;
-  fileName?: string;
-  options?: {
-    excludeSystemMessages: boolean;
-    dateStart?: string;
-    dateEnd?: string;
-    selectedParticipants?: string[];
-  };
-  messageCount?: number;
-}
 
 export default function JobDetailPage() {
   const router = useRouter();
@@ -45,12 +29,13 @@ export default function JobDetailPage() {
     if (isAuthenticated && jobId) {
       loadJob();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isLoading, jobId, router]);
 
   const loadJob = async () => {
     try {
       setIsLoadingJob(true);
-      const data = await apiGet<JobDetail>(`/jobs/${jobId}`);
+      const data = await getJob(jobId);
       setJob(data);
     } catch (error) {
       console.error("Failed to load job:", error);
@@ -61,13 +46,11 @@ export default function JobDetailPage() {
   };
 
   const handleDownload = async () => {
-    if (!job?.downloadUrl) return;
+    if (!job) return;
 
     try {
-      await downloadFile(
-        job.downloadUrl,
-        job.fileName || `job-${job.id}.xlsx`
-      );
+      const blob = await downloadJob(jobId);
+      downloadBlob(blob, job.fileName || `job-${job.id}.xlsx`);
     } catch (error) {
       console.error("Download error:", error);
       alert("다운로드 중 오류가 발생했습니다.");
@@ -136,7 +119,9 @@ export default function JobDetailPage() {
       <div className="space-y-6">
         {/* 기본 정보 */}
         <div className="rounded-lg border bg-white p-6">
-          <h2 className="mb-4 text-lg font-semibold text-gray-900">기본 정보</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            기본 정보
+          </h2>
           <dl className="space-y-2">
             <div className="flex justify-between">
               <dt className="text-sm text-gray-600">상태</dt>
@@ -168,7 +153,9 @@ export default function JobDetailPage() {
         {/* 변환 옵션 */}
         {job.options && (
           <div className="rounded-lg border bg-white p-6">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">변환 옵션</h2>
+            <h2 className="mb-4 text-lg font-semibold text-gray-900">
+              변환 옵션
+            </h2>
             <dl className="space-y-2">
               <div className="flex justify-between">
                 <dt className="text-sm text-gray-600">시스템 메시지 제외</dt>
@@ -180,7 +167,9 @@ export default function JobDetailPage() {
                 <div className="flex justify-between">
                   <dt className="text-sm text-gray-600">시작 날짜</dt>
                   <dd className="text-sm text-gray-900">
-                    {new Date(job.options.dateStart).toLocaleDateString("ko-KR")}
+                    {new Date(job.options.dateStart).toLocaleDateString(
+                      "ko-KR"
+                    )}
                   </dd>
                 </div>
               )}
@@ -192,14 +181,15 @@ export default function JobDetailPage() {
                   </dd>
                 </div>
               )}
-              {job.options.selectedParticipants && job.options.selectedParticipants.length > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-sm text-gray-600">선택된 참여자</dt>
-                  <dd className="text-sm text-gray-900">
-                    {job.options.selectedParticipants.join(", ")}
-                  </dd>
-                </div>
-              )}
+              {job.options.selectedParticipants &&
+                job.options.selectedParticipants.length > 0 && (
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-gray-600">선택된 참여자</dt>
+                    <dd className="text-sm text-gray-900">
+                      {job.options.selectedParticipants.join(", ")}
+                    </dd>
+                  </div>
+                )}
             </dl>
           </div>
         )}
@@ -219,5 +209,3 @@ export default function JobDetailPage() {
     </div>
   );
 }
-
-

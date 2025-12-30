@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface Message {
   timestamp: string;
@@ -53,9 +53,7 @@ export const useConvertStore = create<ConvertState>()(
       resetOptions: () => set({ options: defaultOptions }),
     }),
     {
-      name: 'convert-options-storage',
+      name: "convert-options-storage",
     }
   )
 );
-
-

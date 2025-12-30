@@ -18,6 +18,7 @@ export default function FiltersPanel({
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>(
     []
   );
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Get unique participants (빈 문자열 제외)
   const participants = useMemo(() => {
@@ -54,6 +55,17 @@ export default function FiltersPanel({
       );
     }
 
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((m) => {
+        // 보낸사람, 내용에서 검색
+        const senderMatch = m.sender.toLowerCase().includes(query);
+        const contentMatch = m.content.toLowerCase().includes(query);
+        return senderMatch || contentMatch;
+      });
+    }
+
     return filtered;
   }, [
     messages,
@@ -61,7 +73,16 @@ export default function FiltersPanel({
     dateStart,
     dateEnd,
     selectedParticipants,
+    searchQuery,
   ]);
+
+  // Initialize selectedParticipants to all participants when messages are loaded
+  useEffect(() => {
+    if (participants.length > 0 && selectedParticipants.length === 0) {
+      setSelectedParticipants([...participants]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [participants]);
 
   useEffect(() => {
     onFilteredChange(filteredMessages);
@@ -90,6 +111,17 @@ export default function FiltersPanel({
     );
   }, [participants, selectedParticipants]);
 
+  // 선택된 컬럼 개수 계산
+  const selectedColumnCount = useMemo(() => {
+    let count = 0;
+    if (options.showDate ?? true) count++;
+    if (options.showTime ?? true) count++;
+    if (options.showSender ?? true) count++;
+    if (options.showType ?? true) count++;
+    if (options.showContent ?? true) count++;
+    return count;
+  }, [options]);
+
   const handleSelectAllColumns = (checked: boolean) => {
     setOptions({
       showDate: checked,
@@ -110,6 +142,23 @@ export default function FiltersPanel({
     );
   }, [options]);
 
+  // 개별 컬럼 토글 핸들러 (최소 1개는 선택되어야 함)
+  const handleColumnToggle = (
+    columnKey:
+      | "showDate"
+      | "showTime"
+      | "showSender"
+      | "showType"
+      | "showContent",
+    checked: boolean
+  ) => {
+    // 체크 해제하려고 할 때, 선택된 컬럼이 1개만 남았으면 막기
+    if (!checked && selectedColumnCount <= 1) {
+      return; // 최소 1개는 선택되어야 하므로 변경하지 않음
+    }
+    setOptions({ [columnKey]: checked });
+  };
+
   const handleExcludeSystemChange = (checked: boolean) => {
     setOptions({ excludeSystemMessages: checked });
   };
@@ -121,21 +170,44 @@ export default function FiltersPanel({
       </h3>
 
       <div className="space-y-3 sm:space-y-4">
-        {/* System messages filter */}
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="exclude-system"
-            checked={options.excludeSystemMessages}
-            onChange={(e) => handleExcludeSystemChange(e.target.checked)}
-            className="custom-checkbox h-4 w-4"
-          />
-          <label
-            htmlFor="exclude-system"
-            className="ml-2 text-xs text-gray-700 sm:text-sm"
-          >
-            시스템 메시지 제외
-          </label>
+        {/* System messages filter and Search - 가로 배치 */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          {/* System messages filter */}
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="exclude-system"
+              checked={options.excludeSystemMessages}
+              onChange={(e) => handleExcludeSystemChange(e.target.checked)}
+              className="custom-checkbox"
+            />
+            <label
+              htmlFor="exclude-system"
+              className="ml-2 text-xs text-gray-700 sm:text-sm"
+            >
+              시스템 메시지 제외
+            </label>
+          </div>
+
+          {/* Search - 작은 부가기능 */}
+          <div className="relative w-full sm:w-auto sm:max-w-xs">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="검색..."
+              className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 pl-9 pr-8 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 sm:px-3 sm:py-1.5 sm:pl-10 sm:pr-9 sm:text-xs"
+            />
+            <i className="ri-search-line absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none sm:left-3"></i>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 sm:right-3"
+              >
+                <i className="ri-close-line text-xs"></i>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Date range filters */}
@@ -178,7 +250,7 @@ export default function FiltersPanel({
                   onChange={(e) =>
                     handleSelectAllParticipants(e.target.checked)
                   }
-                  className="custom-checkbox h-4 w-4"
+                  className="custom-checkbox"
                 />
                 <label
                   htmlFor="participant-all"
@@ -194,7 +266,7 @@ export default function FiltersPanel({
                     id={`participant-${participant}`}
                     checked={selectedParticipants.includes(participant)}
                     onChange={() => handleParticipantToggle(participant)}
-                    className="custom-checkbox h-4 w-4"
+                    className="custom-checkbox"
                   />
                   <label
                     htmlFor={`participant-${participant}`}
@@ -219,7 +291,7 @@ export default function FiltersPanel({
                   id="show-all-columns"
                   checked={allColumnsSelected}
                   onChange={(e) => handleSelectAllColumns(e.target.checked)}
-                  className="custom-checkbox h-4 w-4"
+                  className="custom-checkbox"
                 />
                 <label
                   htmlFor="show-all-columns"
@@ -233,8 +305,10 @@ export default function FiltersPanel({
                   type="checkbox"
                   id="show-date"
                   checked={options.showDate ?? true}
-                  onChange={(e) => setOptions({ showDate: e.target.checked })}
-                  className="custom-checkbox h-4 w-4"
+                  onChange={(e) =>
+                    handleColumnToggle("showDate", e.target.checked)
+                  }
+                  className="custom-checkbox"
                 />
                 <label
                   htmlFor="show-date"
@@ -248,8 +322,10 @@ export default function FiltersPanel({
                   type="checkbox"
                   id="show-time"
                   checked={options.showTime ?? true}
-                  onChange={(e) => setOptions({ showTime: e.target.checked })}
-                  className="custom-checkbox h-4 w-4"
+                  onChange={(e) =>
+                    handleColumnToggle("showTime", e.target.checked)
+                  }
+                  className="custom-checkbox"
                 />
                 <label
                   htmlFor="show-time"
@@ -263,8 +339,10 @@ export default function FiltersPanel({
                   type="checkbox"
                   id="show-sender"
                   checked={options.showSender ?? true}
-                  onChange={(e) => setOptions({ showSender: e.target.checked })}
-                  className="custom-checkbox h-4 w-4"
+                  onChange={(e) =>
+                    handleColumnToggle("showSender", e.target.checked)
+                  }
+                  className="custom-checkbox"
                 />
                 <label
                   htmlFor="show-sender"
@@ -278,8 +356,10 @@ export default function FiltersPanel({
                   type="checkbox"
                   id="show-type"
                   checked={options.showType ?? true}
-                  onChange={(e) => setOptions({ showType: e.target.checked })}
-                  className="custom-checkbox h-4 w-4"
+                  onChange={(e) =>
+                    handleColumnToggle("showType", e.target.checked)
+                  }
+                  className="custom-checkbox"
                 />
                 <label
                   htmlFor="show-type"
@@ -294,9 +374,9 @@ export default function FiltersPanel({
                   id="show-content"
                   checked={options.showContent ?? true}
                   onChange={(e) =>
-                    setOptions({ showContent: e.target.checked })
+                    handleColumnToggle("showContent", e.target.checked)
                   }
-                  className="custom-checkbox h-4 w-4"
+                  className="custom-checkbox"
                 />
                 <label
                   htmlFor="show-content"

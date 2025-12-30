@@ -66,9 +66,13 @@ export function parseKakaoTalkFile(content: string): Message[] {
       let content = currentMessage.content.join(" ").trim();
       let type: "message" | "system" | "image" | "video" = "message";
 
-      // 내용이 "사진"만 있으면 처리
+      // 내용이 "사진"만 있거나 "사진 + 숫자 + 장" 패턴이면 처리
       if (content === "사진") {
-        content = "사진🖼";
+        content = "__IMAGE_ICON__사진";
+        type = "image";
+      } else if (/^사진\s*\d+\s*장$/.test(content)) {
+        // "사진 2장", "사진 3장" 등의 패턴
+        content = content.replace(/^사진/, "__IMAGE_ICON__사진");
         type = "image";
       }
       // 내용이 "동영상"만 있으면 처리
@@ -128,25 +132,13 @@ export function parseKakaoTalkFile(content: string): Message[] {
       // 여러 줄 메시지 처리
       currentMessage.content.push(line);
     } else {
-      // 시간/날짜 없는 텍스트 (시스템 메시지로 처리)
-      // 예: "이거 메시지가 삭제되었습니다."
-      // 날짜 구분선이나 헤더가 아닌 경우에만 처리
-      if (
-        !line.match(dateSeparatorPattern) &&
-        !line.includes("님과 카카오톡 대화") &&
-        !line.includes("저장한 날짜") &&
-        line !== "카카오톡 대화 내보내기"
-      ) {
-        // 시스템 메시지로 추가
-        messages.push({
-          timestamp: currentDate
-            ? parseKakaoTalkDateTime("오전 0:00", currentDate).toISOString()
-            : new Date().toISOString(),
-          sender: "",
-          content: line,
-          type: "system",
-        });
-      }
+      // 시간/날짜 패턴이 없는 텍스트는 시스템 메시지로 처리
+      messages.push({
+        timestamp: new Date().toISOString(), // 현재 시간으로 임시 설정
+        sender: "",
+        content: line,
+        type: "system",
+      });
     }
   }
 

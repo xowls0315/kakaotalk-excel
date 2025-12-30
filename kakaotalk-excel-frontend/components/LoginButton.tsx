@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getLogoutUrl } from "@/lib/auth";
+import { logout as apiLogout } from "@/lib/auth";
 
 export default function LoginButton() {
   const router = useRouter();
@@ -14,10 +14,7 @@ export default function LoginButton() {
 
   const handleLogout = async () => {
     try {
-      await fetch(getLogoutUrl(), {
-        method: "POST",
-        credentials: "include",
-      });
+      await apiLogout();
       logout();
       router.push("/");
     } catch (error) {

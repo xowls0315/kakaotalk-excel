@@ -64,6 +64,19 @@ cd kakaotalk-excel-frontend
 npm install
 ```
 
+### 환경 변수 설정
+
+프로젝트 루트에 `.env.local` 파일을 생성하고 다음 내용을 추가하세요:
+
+```env
+# API Base URL
+# 배포된 서버: https://kakaotalk-excel-backend.onrender.com
+# 로컬 개발: http://localhost:3001
+NEXT_PUBLIC_API_BASE_URL=https://kakaotalk-excel-backend.onrender.com
+```
+
+**참고**: 환경 변수를 설정하지 않으면 기본값으로 배포된 서버(`https://kakaotalk-excel-backend.onrender.com`)를 사용합니다.
+
 ### 개발 서버 실행
 
 ```bash
@@ -192,6 +205,14 @@ NEXT_PUBLIC_BACKEND_ENABLED=true
 - OAuth 기반 인증 (백엔드 연동 시)
 - 게스트 모드 지원 (로그인 없이 변환 가능)
 - 세션 쿠키 기반 인증 상태 관리
+
+### 배포된 백엔드 서버
+
+- **배포 링크**: https://kakaotalk-excel-backend.onrender.com/
+- **카카오 로그인 링크**: https://kakaotalk-excel-backend.onrender.com/auth/kakao/callback
+- **Swagger UI**: https://kakaotalk-excel-backend.onrender.com/api
+
+프론트엔드는 기본적으로 배포된 서버를 사용하도록 설정되어 있습니다.
 
 ## 📦 상태 관리
 

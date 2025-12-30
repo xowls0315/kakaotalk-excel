@@ -5,12 +5,12 @@ import Link from "next/link";
 
 export default function UploadPage() {
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8 sm:py-16">
+    <div className="container mx-auto max-w-4xl px-4 py-16">
       {/* Title */}
-      <h1 className="mb-3 text-center text-2xl font-bold text-[#2F2F2F] sm:mb-4 sm:text-4xl">
+      <h1 className="mb-4 text-center text-4xl font-bold text-[#2F2F2F]">
         파일 하나만 올려주세요
       </h1>
-      <p className="mb-8 text-center text-sm text-gray-600 sm:mb-12 sm:text-base">
+      <p className="mb-12 text-center text-gray-600">
         카카오톡에서 내보낸 대화 파일이면 충분해요.
       </p>
 
@@ -20,11 +20,11 @@ export default function UploadPage() {
       </div>
 
       {/* File Format Info */}
-      <div className="mb-6 rounded-2xl border border-[#FBE27A] bg-[#FFF8D8] p-4 sm:mb-8 sm:p-6">
-        <h2 className="mb-2 text-base font-semibold text-[#2F2F2F] sm:mb-3 sm:text-lg">
+      <div className="mb-8 rounded-2xl border border-[#FBE27A] bg-[#FFF8D8] p-6">
+        <h2 className="mb-3 text-lg font-semibold text-[#2F2F2F]">
           📋 업로드 전에 잠깐만 확인해주세요
         </h2>
-        <ul className="list-disc space-y-1.5 pl-5 text-xs text-gray-700 sm:space-y-2 sm:pl-6 sm:text-sm">
+        <ul className="list-disc space-y-2 pl-6 text-sm text-gray-700">
           <li>
             카카오톡에서 대화를 내보낼 때 <strong>.txt</strong> 형식으로
             저장해주세요
@@ -39,11 +39,11 @@ export default function UploadPage() {
       </div>
 
       {/* Export Guide */}
-      <div className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-6">
-        <h2 className="mb-2 text-base font-semibold text-[#2F2F2F] sm:mb-3 sm:text-lg">
+      <div className="rounded-2xl border border-gray-100 bg-white p-6">
+        <h2 className="mb-3 text-lg font-semibold text-[#2F2F2F]">
           💡 혹시 대화 내보내기가 처음이라면
         </h2>
-        <ol className="list-decimal space-y-1.5 pl-5 text-xs text-gray-700 sm:space-y-2 sm:pl-6 sm:text-sm">
+        <ol className="list-decimal space-y-2 pl-6 text-sm text-gray-700">
           <li>카카오톡 앱에서 변환하고 싶은 대화방을 열어요</li>
           <li>대화방 상단의 메뉴(⋮)를 눌러요</li>
           <li>“대화 내보내기”를 선택해요</li>
@@ -58,7 +58,7 @@ export default function UploadPage() {
             href="/guide"
             className="text-sm font-medium text-[#3FAF8E] hover:underline"
           >
-            이미지로 보는 자세한 방법 →
+            자세한 방법 →
           </Link>
         </div>
       </div>

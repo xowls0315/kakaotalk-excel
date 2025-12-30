@@ -1,4 +1,4 @@
-import { apiGet } from "./apiClient";
+import { apiGet, apiPost } from "./apiClient";
 
 export interface User {
   id: string;
@@ -48,19 +48,37 @@ export async function checkAuth(): Promise<AuthStatus> {
 }
 
 /**
+ * POST /auth/refresh - Access Token 재발급
+ */
+export async function refreshToken(): Promise<void> {
+  await apiPost("/auth/refresh");
+}
+
+/**
+ * POST /auth/logout - 로그아웃
+ */
+export async function logout(): Promise<void> {
+  await apiPost("/auth/logout");
+}
+
+/**
  * Get login URL (redirect to backend OAuth endpoint)
+ * 배포 서버: https://kakaotalk-excel-backend.onrender.com/auth/login
  */
 export function getLoginUrl(): string {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "https://kakaotalk-excel-backend.onrender.com";
   return `${apiBaseUrl}/auth/login`;
 }
 
 /**
  * Get logout URL
+ * 배포 서버: https://kakaotalk-excel-backend.onrender.com/auth/logout
  */
 export function getLogoutUrl(): string {
   const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "https://kakaotalk-excel-backend.onrender.com";
   return `${apiBaseUrl}/auth/logout`;
 }
