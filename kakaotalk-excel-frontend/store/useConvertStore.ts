@@ -5,7 +5,7 @@ export interface Message {
   timestamp: string;
   sender: string;
   content: string;
-  type: "message" | "system";
+  type: "message" | "system" | "image" | "video";
 }
 
 export interface ConvertOptions {
@@ -47,4 +47,5 @@ export const useConvertStore = create<ConvertState>()(
     }
   )
 );
+
 

@@ -18,12 +18,12 @@ export default function UploadDropzone({
   const handleFile = useCallback(
     async (file: File) => {
       if (!file.name.endsWith(".txt")) {
-        setError("카카오톡 대화 내보내기 .txt 파일만 업로드 가능합니다.");
+        setError("카카오톡에서 내보낸 .txt 파일만 사용할 수 있어요.");
         return;
       }
 
       if (file.size > 10 * 1024 * 1024) {
-        setError("파일 크기는 10MB 이하여야 합니다.");
+        setError("파일이 조금 커요. 10MB 이하로 부탁드려요.");
         return;
       }
 
@@ -41,13 +41,13 @@ export default function UploadDropzone({
           router.push("/preview");
         };
         reader.onerror = () => {
-          setError("파일 읽기 중 오류가 발생했습니다.");
+          setError("파일을 읽는 중에 문제가 생겼어요.");
           setIsUploading(false);
         };
         reader.readAsText(file, "UTF-8");
       } catch (error) {
         console.error("File upload error:", error);
-        setError("파일 업로드 중 오류가 발생했습니다.");
+        setError("업로드 중 문제가 발생했어요. 다시 시도해주세요.");
         setIsUploading(false);
       }
     },
@@ -60,9 +60,7 @@ export default function UploadDropzone({
       setIsDragging(false);
 
       const file = e.dataTransfer.files[0];
-      if (file) {
-        handleFile(file);
-      }
+      if (file) handleFile(file);
     },
     [handleFile]
   );
@@ -80,9 +78,7 @@ export default function UploadDropzone({
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (file) {
-        handleFile(file);
-      }
+      if (file) handleFile(file);
     },
     [handleFile]
   );
@@ -93,11 +89,22 @@ export default function UploadDropzone({
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={`relative rounded-2xl border-2 border-dashed p-12 text-center transition-colors ${
-          isDragging
-            ? "border-sky-500 bg-sky-50"
-            : "border-gray-300 bg-white hover:border-sky-300"
-        } ${isUploading ? "opacity-50 pointer-events-none" : "cursor-pointer"}`}
+        className={`
+          relative
+          rounded-2xl
+          border-2
+          border-dashed
+          p-6
+          text-center
+          transition
+          sm:p-12
+          ${
+            isDragging
+              ? "border-[#3FAF8E] bg-[#EAF7F2]"
+              : "border-[#FBE27A] bg-white hover:bg-[#FFFDF0]"
+          }
+          ${isUploading ? "pointer-events-none opacity-60" : "cursor-pointer"}
+        `}
       >
         <input
           type="file"
@@ -107,19 +114,25 @@ export default function UploadDropzone({
           id="file-upload"
           disabled={isUploading}
         />
+
         <label htmlFor="file-upload" className="cursor-pointer">
-          <div className="mb-4 text-6xl">📤</div>
-          <h3 className="mb-2 text-xl font-semibold text-gray-900">
+          <div className="mb-3 text-4xl sm:mb-4 sm:text-6xl">📤</div>
+
+          <h3 className="mb-2 text-base font-semibold text-[#2F2F2F] sm:text-xl">
             {isUploading
-              ? "업로드 중..."
-              : "파일을 드래그하거나 클릭하여 업로드"}
+              ? "잠시만요, 파일 읽는 중이에요…"
+              : "여기에 파일을 끌어오거나 눌러서 선택하세요"}
           </h3>
-          <p className="text-sm text-gray-600">
-            카카오톡에서 내보낸 .txt 파일만 업로드 가능합니다
+
+          <p className="text-xs text-gray-600 sm:text-sm">
+            카카오톡에서 내보낸 <strong>.txt</strong> 파일이면 바로 돼요
           </p>
+
           {isUploading && (
-            <div className="mt-4">
-              <div className="mx-auto h-2 w-48 animate-pulse rounded-full bg-sky-200"></div>
+            <div className="mt-6">
+              <div className="mx-auto h-2 w-48 overflow-hidden rounded-full bg-[#FFF3C4]">
+                <div className="h-full w-1/2 animate-pulse rounded-full bg-[#FBE27A]" />
+              </div>
             </div>
           )}
         </label>

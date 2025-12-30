@@ -19,9 +19,11 @@ export default function FiltersPanel({
     []
   );
 
-  // Get unique participants
+  // Get unique participants (빈 문자열 제외)
   const participants = useMemo(() => {
-    const unique = Array.from(new Set(messages.map((m) => m.sender)));
+    const unique = Array.from(new Set(messages.map((m) => m.sender))).filter(
+      (sender) => sender.trim() !== ""
+    );
     return unique.sort();
   }, [messages]);
 
@@ -78,10 +80,12 @@ export default function FiltersPanel({
   };
 
   return (
-    <div className="rounded-lg border bg-white p-6">
-      <h3 className="mb-4 text-lg font-semibold text-gray-900">필터 옵션</h3>
+    <div className="rounded-lg border bg-white p-4 sm:p-6">
+      <h3 className="mb-3 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
+        필터 옵션
+      </h3>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {/* System messages filter */}
         <div className="flex items-center">
           <input
@@ -93,7 +97,7 @@ export default function FiltersPanel({
           />
           <label
             htmlFor="exclude-system"
-            className="ml-2 text-sm text-gray-700"
+            className="ml-2 text-xs text-gray-700 sm:text-sm"
           >
             시스템 메시지 제외
           </label>
@@ -101,32 +105,34 @@ export default function FiltersPanel({
 
         {/* Date range filters */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs font-medium text-gray-700 sm:text-sm">
             날짜 범위
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="date"
               value={dateStart}
               onChange={(e) => setDateStart(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 sm:px-3 sm:py-2 sm:text-sm"
             />
-            <span className="flex items-center text-gray-500">~</span>
+            <span className="flex items-center justify-center text-gray-500 sm:px-0">
+              ~
+            </span>
             <input
               type="date"
               value={dateEnd}
               onChange={(e) => setDateEnd(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              className="flex-1 rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500 sm:px-3 sm:py-2 sm:text-sm"
             />
           </div>
         </div>
 
         {/* Participant filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-xs font-medium text-gray-700 sm:text-sm">
             참여자 필터
           </label>
-          <div className="mt-2 max-h-40 space-y-2 overflow-y-auto">
+          <div className="mt-2 max-h-32 space-y-1.5 overflow-y-auto sm:max-h-40 sm:space-y-2">
             {participants.map((participant) => (
               <div key={participant} className="flex items-center">
                 <input
@@ -138,7 +144,7 @@ export default function FiltersPanel({
                 />
                 <label
                   htmlFor={`participant-${participant}`}
-                  className="ml-2 text-sm text-gray-700"
+                  className="ml-2 text-xs text-gray-700 sm:text-sm"
                 >
                   {participant}
                 </label>
@@ -148,7 +154,7 @@ export default function FiltersPanel({
         </div>
 
         {/* Filter summary */}
-        <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-600">
+        <div className="rounded-md bg-gray-50 p-2 text-xs text-gray-600 sm:p-3 sm:text-sm">
           <p>
             표시 중: <strong>{filteredMessages.length}</strong> /{" "}
             {messages.length} 메시지
@@ -158,4 +164,3 @@ export default function FiltersPanel({
     </div>
   );
 }
-

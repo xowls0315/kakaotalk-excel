@@ -6,33 +6,36 @@ import LoginButton from "./LoginButton";
 
 export default function Header() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  // 백엔드 없이 실행 시 인증 체크 건너뛰기
-  // const { isAuthenticated, checkAuthStatus, isLoading } = useAuthStore();
-  // useEffect(() => {
-  //   checkAuthStatus();
-  // }, [checkAuthStatus]);
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-white shadow-sm">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="text-xl font-bold text-sky-600">
+    <header className="sticky top-0 z-50 border-b border-[#F0F0F0] bg-[#FFFEF8]">
+      <div className="container mx-auto flex h-14 max-w-[1200px] items-center justify-between px-3 sm:h-16 sm:px-4">
+        {/* Text Logo */}
+        <Link
+          href="/"
+          className="text-base font-bold text-[#2F2F2F] tracking-tight sm:text-lg"
+        >
           Talk to Excel
         </Link>
-        <nav className="flex items-center gap-4">
+
+        {/* Nav */}
+        <nav className="flex items-center gap-2 sm:gap-5">
           <Link
             href="/guide"
-            className="text-sm text-gray-600 hover:text-gray-900"
+            className="hidden text-xs font-medium text-[#2F2F2F] hover:text-[#3FAF8E] transition sm:block sm:text-sm"
           >
-            사용 가이드
+            Guide
           </Link>
+
           {isAuthenticated && (
             <Link
               href="/dashboard"
-              className="text-sm text-gray-600 hover:text-gray-900"
+              className="hidden text-xs font-medium text-[#2F2F2F] hover:text-[#3FAF8E] transition sm:block sm:text-sm"
             >
               내 기록
             </Link>
           )}
+
           <LoginButton />
         </nav>
       </div>

@@ -1,13 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getLoginUrl, getLogoutUrl } from "@/lib/auth";
+import { getLogoutUrl } from "@/lib/auth";
 
 export default function LoginButton() {
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const router = useRouter();
+  const { isAuthenticated, logout } = useAuthStore();
 
   const handleLogin = () => {
-    window.location.href = getLoginUrl();
+    router.push("/login"); // ✅ 로그인 페이지로 이동
   };
 
   const handleLogout = async () => {
@@ -17,35 +19,55 @@ export default function LoginButton() {
         credentials: "include",
       });
       logout();
-      window.location.href = "/";
+      router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
       logout();
+      router.push("/");
     }
   };
 
   if (isAuthenticated) {
     return (
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-gray-700">
-          {user?.name || user?.email}
-        </span>
-        <button
-          onClick={handleLogout}
-          className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          로그아웃
-        </button>
-      </div>
+      <button
+        onClick={handleLogout}
+        className="
+          rounded-md
+          border border-[#3FAF8E]
+          px-4 py-2
+          text-sm
+          font-medium
+          text-[#3FAF8E]
+          transition
+          hover:bg-[#EAF7F2]
+          dark:border-[#4FC3A1]
+          dark:text-[#4FC3A1]
+          dark:hover:bg-[#1E2621]
+        "
+      >
+        로그아웃
+      </button>
     );
   }
 
   return (
     <button
       onClick={handleLogin}
-      className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600"
+      className="
+        rounded-md
+        bg-[#FBE27A]
+        px-4 py-2
+        text-sm
+        font-semibold
+        text-[#2F2F2F]
+        transition
+        hover:bg-[#F5D96B]
+        dark:bg-[#E6C85C]
+        dark:text-[#0F1411]
+        dark:hover:bg-[#D9B94F]
+      "
     >
-      로그인
+      Login
     </button>
   );
 }

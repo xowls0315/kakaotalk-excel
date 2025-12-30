@@ -3,148 +3,103 @@
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
 
+const FEATURES = [
+  {
+    icon: "📤",
+    title: "파일 하나만 올리면",
+    desc: "카카오톡에서 내보낸 txt 파일을 그대로 올리면 돼요.",
+  },
+  {
+    icon: "🔍",
+    title: "필요한 대화만 골라서",
+    desc: "날짜나 참여자 기준으로 메시지를 정리할 수 있어요.",
+  },
+  {
+    icon: "📊",
+    title: "엑셀로 정리 끝",
+    desc: "복잡한 대화도 엑셀 표로 한 번에 정리돼요.",
+  },
+] as const;
+
 export default function Home() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  // 백엔드 없이 실행 시 인증 체크 건너뛰기
-  // const { isAuthenticated, checkAuthStatus } = useAuthStore();
-  // useEffect(() => {
-  //   checkAuthStatus();
-  // }, [checkAuthStatus]);
 
   return (
-    <div className="relative overflow-hidden bg-sky-50">
-      {/* 배경 장식 */}
-      <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white/60 blur-3xl" />
-      <div className="pointer-events-none absolute top-40 -right-32 h-[28rem] w-[28rem] rounded-full bg-white/50 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-1/3 h-80 w-80 rounded-full bg-white/40 blur-3xl" />
-
-      <div className="container relative mx-auto max-w-6xl py-20">
-        {/* Hero Section */}
-        <div className="mb-20 text-center">
-          <h1 className="mb-6 text-5xl font-extrabold leading-tight text-gray-900">
-            카카오톡 대화를
+    <div className="min-h-screen bg-[#FFFEF8]">
+      <div className="container mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-24">
+        {/* Hero */}
+        <section className="mb-16 text-center sm:mb-24">
+          <h1 className="mb-4 text-2xl font-bold leading-tight text-[#2F2F2F] sm:mb-6 sm:text-4xl">
+            카톡 대화,
             <br />
-            엑셀로 변환하세요
+            정리하려다{" "}
+            <span className="text-flicker-in-glow inline-block text-[#FBE27A]">
+              포기
+            </span>
+            한 적 있죠?
           </h1>
 
-          <p className="mb-10 text-xl leading-relaxed text-gray-600">
-            카카오톡에서 내보낸 대화 파일을
+          <p className="mb-8 text-base text-gray-600 sm:mb-10 sm:text-lg">
+            회의 기록, 거래 내역, 일정 정리…
             <br />
-            간편하게 엑셀 형식으로 변환해보세요.
+            이제 복붙 말고 엑셀로 한 번에 정리하세요.
           </p>
 
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <Link
               href="/upload"
-              className="rounded-xl bg-sky-500 px-8 py-3 text-lg font-semibold text-white shadow-sm transition
-                         hover:-translate-y-0.5 hover:bg-sky-600 hover:shadow-md
-                         active:translate-y-0"
+              className="w-full rounded-lg bg-[#FBE27A] px-6 py-3 text-base font-semibold text-[#2F2F2F] transition hover:bg-[#fff0b3] sm:w-auto sm:px-8 sm:text-lg"
             >
-              바로 변환하기
+              지금 파일 올려보기
             </Link>
 
             <Link
               href="/guide"
-              className="rounded-xl border border-sky-200 bg-white px-8 py-3 text-lg font-medium text-gray-700
-                         transition hover:-translate-y-0.5 hover:bg-sky-50 hover:shadow-sm"
+              className="w-full rounded-lg border border-[#3FAF8E] bg-white px-6 py-3 text-base font-medium text-[#2F2F2F] transition hover:bg-[#EAF7F2] sm:w-auto sm:px-8 sm:text-lg"
             >
-              사용 가이드
+              처음이라면 사용 방법 보기
             </Link>
           </div>
-        </div>
+        </section>
 
         {/* Features */}
-        <div className="mb-20 grid grid-cols-1 gap-8 md:grid-cols-3">
-          {[
-            {
-              icon: "📤",
-              title: "간편한 업로드",
-              desc: "카카오톡에서 내보낸 .txt 파일을 드래그 앤 드롭으로 업로드하세요.",
-            },
-            {
-              icon: "🔍",
-              title: "스마트 필터링",
-              desc: "날짜 범위, 참여자, 시스템 메시지 등 다양한 필터 옵션을 제공합니다.",
-            },
-            {
-              icon: "📊",
-              title: "엑셀 변환",
-              desc: "엑셀 파일로 대화 내용을 체계적으로 관리하고 분석하세요.",
-            },
-          ].map((f) => (
+        <section className="mb-16 grid gap-6 sm:mb-24 sm:gap-8 md:grid-cols-3">
+          {FEATURES.map((feature, index) => (
             <div
-              key={f.title}
-              className="rounded-2xl border bg-white p-6 transition-all duration-200
-                         hover:-translate-y-1 hover:shadow-md hover:border-sky-200"
+              key={feature.title}
+              className="bounce-top rounded-2xl border border-gray-100 bg-white p-5 text-center sm:p-6"
+              style={{
+                animationDelay: `${index * 0.2}s`,
+              }}
             >
-              <div className="mb-4 text-4xl">{f.icon}</div>
-              <h3 className="mb-2 text-xl font-semibold text-gray-900">
-                {f.title}
+              <div className="mb-3 text-3xl sm:mb-4">{feature.icon}</div>
+              <h3 className="mb-2 text-base font-semibold text-[#2F2F2F] sm:text-lg">
+                {feature.title}
               </h3>
-              <p className="text-gray-600">{f.desc}</p>
+              <p className="text-xs text-gray-600 sm:text-sm">{feature.desc}</p>
             </div>
           ))}
-        </div>
+        </section>
 
         {/* Login CTA */}
         {!isAuthenticated && (
-          <div className="rounded-2xl border border-sky-200 bg-sky-100/60 p-10 text-center">
-            <h2 className="mb-4 text-2xl font-bold text-sky-900">
-              로그인하면 더 많은 기능을 이용할 수 있어요 ☁️
+          <section className="mb-16 rounded-2xl border border-[#FBE27A] bg-[#FFF8D8] p-6 text-center sm:mb-24 sm:p-10">
+            <h2 className="mb-3 text-lg font-semibold text-[#2F2F2F] sm:mb-4 sm:text-xl">
+              로그인은 선택이에요 🙂
             </h2>
-            <p className="mb-6 text-sky-800">
-              변환 기록 저장, 재다운로드, 기본 설정 저장까지 한 번에!
+            <p className="mb-5 text-sm text-gray-600 sm:mb-6 sm:text-base">
+              로그인하면 변환 기록을 저장해두고
+              <br />
+              나중에 다시 내려받을 수 있어요.
             </p>
             <Link
               href="/upload"
-              className="inline-block rounded-xl bg-sky-500 px-6 py-3 font-semibold text-white
-                         transition hover:-translate-y-0.5 hover:bg-sky-600 hover:shadow-md"
+              className="inline-block rounded-lg bg-[#FBE27A] px-6 py-3 text-sm font-semibold text-[#2F2F2F] transition hover:bg-[#fff0b3] sm:text-base"
             >
-              먼저 변환해보기
+              일단 한 번 써볼게요
             </Link>
-          </div>
+          </section>
         )}
-
-        {/* How it works */}
-        <div className="mt-24">
-          <h2 className="mb-10 text-center text-3xl font-bold text-gray-900">
-            사용 방법
-          </h2>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="text-center">
-                <div
-                  className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full
-                             bg-sky-100 text-xl font-bold text-sky-600
-                             transition group-hover:scale-110"
-                >
-                  {step}
-                </div>
-                <h4 className="mb-2 font-semibold text-gray-900">
-                  {
-                    [
-                      "대화 내보내기",
-                      "파일 업로드",
-                      "필터 적용",
-                      "엑셀 다운로드",
-                    ][step - 1]
-                  }
-                </h4>
-                <p className="text-sm text-gray-600">
-                  {
-                    [
-                      "카카오톡에서 대화를 txt 파일로 내보냅니다",
-                      "내보낸 파일을 업로드합니다",
-                      "미리보기에서 필터를 적용합니다",
-                      "엑셀 파일을 다운로드합니다",
-                    ][step - 1]
-                  }
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
