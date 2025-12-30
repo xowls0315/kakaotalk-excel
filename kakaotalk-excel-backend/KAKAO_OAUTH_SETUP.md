@@ -70,13 +70,15 @@
 ### 개발/프로덕션 환경별 URI
 
 - **개발 환경**: `http://localhost:3001/auth/kakao/callback`
-- **프로덕션 환경**: `https://yourdomain.com/auth/kakao/callback`
+- **프로덕션 환경 (Render)**: `https://kakaotalk-excel-backend.onrender.com/auth/kakao/callback`
+- **프로덕션 환경 (기타)**: `https://yourdomain.com/auth/kakao/callback`
 
-**참고:**
+**중요**:
 
 - 여러 URI를 등록할 수 있습니다
-- 각 환경별로 필요한 URI를 모두 등록하세요
-- URI는 정확히 일치해야 합니다 (대소문자, 슬래시 포함)
+- **개발 환경과 프로덕션 환경의 URI를 모두 등록해야 합니다**
+- URI는 정확히 일치해야 합니다 (대소문자, 슬래시, 프로토콜 포함)
+- Render에 배포한 경우: `https://kakaotalk-excel-backend.onrender.com/auth/kakao/callback`를 반드시 등록하세요
 
 ---
 

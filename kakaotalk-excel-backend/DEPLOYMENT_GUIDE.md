@@ -51,6 +51,12 @@ PORT=10000
 FRONTEND_URL=https://your-frontend-domain.com
 ```
 
+**중요**:
+
+- `FRONTEND_URL`은 프론트엔드가 배포된 URL로 설정하세요
+- 프론트엔드가 아직 배포되지 않은 경우, 이 값을 설정하지 않으면 로그인 후 JSON으로 토큰을 반환합니다
+- 프론트엔드 배포 후 올바른 URL로 설정하면 자동으로 리다이렉트됩니다
+
 **주의**: Render는 자동으로 `PORT` 환경 변수를 제공하므로, `PORT=10000`으로 설정하거나 코드에서 `process.env.PORT`를 사용하세요.
 
 ### 2.2. 데이터베이스 설정
@@ -229,14 +235,41 @@ NEXT_PUBLIC_API_URL=https://your-backend-url.onrender.com
    - Render 내부 네트워크를 사용하는 것이 더 안정적
    - External URL은 공개 IP이므로 방화벽 제한이 있을 수 있음
 
-### 카카오 로그인 오류
+### 카카오 로그인 오류 (KOE006)
 
-1. **Redirect URI 확인**
-   - 카카오 개발자 콘솔의 Redirect URI가 배포된 URL과 정확히 일치하는지 확인
-   - 예: `https://your-backend-url.onrender.com/auth/kakao/callback`
+**에러 메시지**: "앱 관리자 설정 오류 (KOE006)"
 
-2. **환경 변수 확인**
-   - `KAKAO_CALLBACK_URL`이 배포된 URL로 설정되었는지 확인
+**원인**: 카카오 개발자 콘솔에 배포된 서버의 Redirect URI가 등록되지 않음
+
+**해결 방법**:
+
+1. **카카오 개발자 콘솔 접속**
+   - [카카오 개발자 콘솔](https://developers.kakao.com/) 로그인
+   - 내 애플리케이션 선택
+
+2. **Redirect URI 등록**
+   - **"카카오 로그인"** > **"일반"** 탭 클릭
+   - **"Redirect URI"** 섹션에서 **"+ 추가"** 클릭
+   - 다음 URI 입력:
+     ```
+     https://kakaotalk-excel-backend.onrender.com/auth/kakao/callback
+     ```
+   - **"저장"** 클릭
+
+3. **환경 변수 확인**
+   - Render 대시보드의 **Environment** 섹션에서 `KAKAO_CALLBACK_URL` 확인
+   - 다음 값으로 설정되어 있어야 합니다:
+     ```
+     KAKAO_CALLBACK_URL=https://kakaotalk-excel-backend.onrender.com/auth/kakao/callback
+     ```
+
+4. **서버 재시작** (필요시)
+   - 환경 변수를 변경한 경우 서비스를 재배포하거나 재시작
+
+**참고**:
+
+- 개발 환경 URI (`http://localhost:3001/auth/kakao/callback`)와 프로덕션 URI를 모두 등록할 수 있습니다
+- URI는 정확히 일치해야 합니다 (대소문자, 슬래시, 프로토콜 포함)
 
 ---
 
