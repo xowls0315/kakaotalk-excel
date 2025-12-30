@@ -82,11 +82,16 @@ export class AuthController {
       const nodeEnv = this.configService.get<string>('app.nodeEnv');
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
 
-      if (nodeEnv === 'development') {
-        // 개발 환경: JSON으로 토큰 반환 (Postman 테스트용)
+      // 프론트엔드 URL이 localhost이거나 설정되지 않은 경우 JSON으로 반환
+      if (
+        nodeEnv === 'development' ||
+        !frontendUrl ||
+        frontendUrl.includes('localhost')
+      ) {
+        // 개발 환경 또는 프론트엔드가 없는 경우: JSON으로 토큰 반환
         return res.json({
           success: true,
-          message: '로그인 성공! 아래 토큰을 Postman 환경 변수에 저장하세요.',
+          message: '로그인 성공! 아래 토큰을 사용하세요.',
           accessToken,
           refreshToken,
           user: {
@@ -96,8 +101,8 @@ export class AuthController {
             provider: user.provider,
           },
           instructions: {
-            step1: 'Postman 환경 변수에 access_token을 저장하세요',
-            step2: '이제 인증이 필요한 API를 테스트할 수 있습니다',
+            step1: '이 토큰을 사용하여 API를 호출할 수 있습니다',
+            step2: '프론트엔드가 배포되면 자동으로 리다이렉트됩니다',
             example:
               'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
           },
