@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { Message } from "@/store/useConvertStore";
+import { Message, useConvertStore } from "@/store/useConvertStore";
 import { downloadBlob } from "./download";
 
 /**
@@ -9,6 +9,12 @@ export function convertMessagesToExcel(
   messages: Message[],
   filename: string = "kakaotalk-converted.xlsx"
 ): void {
+  const { options } = useConvertStore.getState();
+  const showDate = options.showDate ?? true;
+  const showTime = options.showTime ?? true;
+  const showSender = options.showSender ?? true;
+  const showType = options.showType ?? true;
+  const showContent = options.showContent ?? true;
   // 엑셀 데이터 준비
   const excelData = messages.map((msg) => {
     const date = new Date(msg.timestamp);
@@ -41,22 +47,22 @@ export function convertMessagesToExcel(
 
     // 시스템 메시지인 경우
     if (msg.type === "system") {
-      return {
-        날짜: dateStr,
-        시간: timeStr,
-        보낸사람: "",
-        타입: "",
-        내용: `[${typeStr}] ${msg.content}`,
-      };
+      const row: Record<string, string> = {};
+      if (showDate) row["날짜"] = dateStr;
+      if (showTime) row["시간"] = timeStr;
+      if (showSender) row["보낸사람"] = "";
+      if (showType) row["타입"] = "";
+      if (showContent) row["내용"] = `[${typeStr}] ${msg.content}`;
+      return row;
     }
 
-    return {
-      날짜: dateStr,
-      시간: timeStr,
-      보낸사람: msg.sender,
-      타입: typeStr,
-      내용: msg.content,
-    };
+    const row: Record<string, string> = {};
+    if (showDate) row["날짜"] = dateStr;
+    if (showTime) row["시간"] = timeStr;
+    if (showSender) row["보낸사람"] = msg.sender;
+    if (showType) row["타입"] = typeStr;
+    if (showContent) row["내용"] = msg.content;
+    return row;
   });
 
   // 워크북 생성
@@ -65,14 +71,14 @@ export function convertMessagesToExcel(
   // 워크시트 생성
   const ws = XLSX.utils.json_to_sheet(excelData);
 
-  // 컬럼 너비 설정
-  ws["!cols"] = [
-    { wch: 15 }, // 날짜
-    { wch: 10 }, // 시간
-    { wch: 10 }, // 보낸사람
-    { wch: 50 }, // 내용
-    { wch: 10 }, // 타입
-  ];
+  // 컬럼 너비 설정 (선택된 컬럼만)
+  const colWidths: { wch: number }[] = [];
+  if (showDate) colWidths.push({ wch: 15 }); // 날짜
+  if (showTime) colWidths.push({ wch: 10 }); // 시간
+  if (showSender) colWidths.push({ wch: 10 }); // 보낸사람
+  if (showType) colWidths.push({ wch: 10 }); // 타입
+  if (showContent) colWidths.push({ wch: 50 }); // 내용
+  ws["!cols"] = colWidths;
 
   // 워크시트를 워크북에 추가
   XLSX.utils.book_append_sheet(wb, ws, "대화내용");

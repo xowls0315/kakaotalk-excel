@@ -13,6 +13,11 @@ export interface ConvertOptions {
   dateStart?: string;
   dateEnd?: string;
   selectedParticipants?: string[];
+  showDate?: boolean;
+  showTime?: boolean;
+  showSender?: boolean;
+  showType?: boolean;
+  showContent?: boolean;
 }
 
 interface ConvertState {
@@ -28,6 +33,11 @@ const defaultOptions: ConvertOptions = {
   dateStart: undefined,
   dateEnd: undefined,
   selectedParticipants: undefined,
+  showDate: true,
+  showTime: true,
+  showSender: true,
+  showType: true,
+  showContent: true,
 };
 
 export const useConvertStore = create<ConvertState>()(

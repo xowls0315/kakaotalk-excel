@@ -1,12 +1,18 @@
 "use client";
 
-import { Message } from "@/store/useConvertStore";
+import { Message, useConvertStore } from "@/store/useConvertStore";
 
 interface PreviewTableProps {
   messages: Message[];
 }
 
 export default function PreviewTable({ messages }: PreviewTableProps) {
+  const { options } = useConvertStore();
+  const showDate = options.showDate ?? true;
+  const showTime = options.showTime ?? true;
+  const showSender = options.showSender ?? true;
+  const showType = options.showType ?? true;
+  const showContent = options.showContent ?? true;
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
     const year = date.getFullYear();
@@ -34,32 +40,60 @@ export default function PreviewTable({ messages }: PreviewTableProps) {
     return typeMap[type] || type;
   };
 
+  const truncateContent = (content: string, maxLength: number = 20) => {
+    if (content.length <= maxLength) {
+      return content;
+    }
+    return content.slice(0, maxLength) + "...";
+  };
+
+  const visibleColumns = [
+    showDate,
+    showTime,
+    showSender,
+    showType,
+    showContent,
+  ].filter(Boolean).length;
+
   return (
     <div className="overflow-x-auto rounded-lg border bg-white">
       <table className="w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left font-semibold text-gray-900">
-              날짜
-            </th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-900">
-              시간
-            </th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-900">
-              보낸 사람
-            </th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-900">
-              타입
-            </th>
-            <th className="px-4 py-3 text-left font-semibold text-gray-900">
-              내용
-            </th>
+            {showDate && (
+              <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                날짜
+              </th>
+            )}
+            {showTime && (
+              <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                시간
+              </th>
+            )}
+            {showSender && (
+              <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                보낸 사람
+              </th>
+            )}
+            {showType && (
+              <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                타입
+              </th>
+            )}
+            {showContent && (
+              <th className="px-4 py-3 text-left font-semibold text-gray-900">
+                내용
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
           {messages.length === 0 ? (
             <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+              <td
+                colSpan={visibleColumns}
+                className="px-4 py-8 text-center text-gray-500"
+              >
                 표시할 메시지가 없습니다
               </td>
             </tr>
@@ -77,19 +111,31 @@ export default function PreviewTable({ messages }: PreviewTableProps) {
               };
               return (
                 <tr key={msgId} className={getRowClassName()}>
-                  <td className="px-4 py-3 text-gray-700">
-                    {formatDate(msg.timestamp)}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {formatTime(msg.timestamp)}
-                  </td>
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {msg.sender}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {getTypeLabel(msg.type)}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">{msg.content}</td>
+                  {showDate && (
+                    <td className="px-4 py-3 text-gray-700">
+                      {formatDate(msg.timestamp)}
+                    </td>
+                  )}
+                  {showTime && (
+                    <td className="px-4 py-3 text-gray-700">
+                      {formatTime(msg.timestamp)}
+                    </td>
+                  )}
+                  {showSender && (
+                    <td className="px-4 py-3 font-medium text-gray-900">
+                      {msg.sender}
+                    </td>
+                  )}
+                  {showType && (
+                    <td className="px-4 py-3 text-gray-700">
+                      {getTypeLabel(msg.type)}
+                    </td>
+                  )}
+                  {showContent && (
+                    <td className="px-4 py-3 text-gray-700">
+                      {truncateContent(msg.content)}
+                    </td>
+                  )}
                 </tr>
               );
             })
