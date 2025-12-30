@@ -23,7 +23,24 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+카카오톡 대화 내보내기(.txt) 파일을 엑셀(.xlsx) 파일로 변환하는 서비스의 백엔드 API입니다.
+
+## 빠른 시작
+
+### 프론트엔드 개발자용
+
+프론트엔드 개발자는 다음 두 가지 방법 중 선택할 수 있습니다:
+
+1. **백엔드 개발자의 서버 사용** (권장 - 가장 빠름)
+   - 백엔드 개발자에게 Swagger UI URL 요청
+   - 브라우저에서 바로 API 테스트 가능
+   - 자세한 방법: `QUICK_START.md` 참고
+
+2. **직접 백엔드 실행**
+   - 환경 변수 및 데이터베이스 설정 필요
+   - 자세한 방법: `QUICK_START.md` 참고
+
+### 백엔드 개발자용
 
 ## Project setup
 
@@ -31,18 +48,60 @@
 $ npm install
 ```
 
+### 환경 변수 설정
+
+`.env.example` 파일을 복사하여 `.env` 파일을 생성하고 실제 값으로 채워주세요:
+
+```bash
+cp .env.example .env  # Linux/Mac
+copy .env.example .env  # Windows
+```
+
+필수 환경 변수:
+
+- 데이터베이스 설정 (PostgreSQL)
+- JWT 시크릿 키
+- 카카오 OAuth 설정 (카카오 로그인 사용 시)
+
+자세한 설정 방법은 `.env.example` 파일의 주석을 참고하세요.
+
+### 데이터베이스 설정
+
+PostgreSQL 데이터베이스를 생성하고 스키마를 적용하세요:
+
+```bash
+psql -U postgres -d kakaotalk_excel -f database/schema.sql
+```
+
 ## Compile and run the project
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
+# development (watch mode - 자동 재시작)
 $ npm run start:dev
 
 # production mode
+$ npm run build
 $ npm run start:prod
 ```
+
+서버가 실행되면:
+
+- API 서버: `http://localhost:3001`
+- Swagger UI: `http://localhost:3001/api`
+
+## 주요 문서
+
+### 프론트엔드 개발자용
+
+- **빠른 시작 가이드**: `QUICK_START.md` (필독! 가장 빠른 시작 방법)
+- **프론트엔드 개발자 가이드**: `FRONTEND_DEVELOPER_GUIDE.md`
+- **Swagger UI 사용법**: `README_SWAGGER.md`
+
+### 백엔드 개발자용
+
+- **Render 배포 가이드**: `DEPLOYMENT_GUIDE.md` (프론트엔드 개발자에게 배포된 서버 제공 시)
+- **Postman 테스트 가이드**: `POSTMAN_TEST_GUIDE.md`
+- **카카오 OAuth 설정**: `KAKAO_OAUTH_SETUP.md`
 
 ## Run tests
 
