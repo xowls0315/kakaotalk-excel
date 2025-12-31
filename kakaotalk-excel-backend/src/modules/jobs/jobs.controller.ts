@@ -11,6 +11,7 @@ import {
   ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   ApiTags,
   ApiOperation,
@@ -48,7 +49,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @ApiTags('Convert')
 @Controller()
 export class JobsController {
-  constructor(private jobsService: JobsService) {}
+  constructor(
+    private jobsService: JobsService,
+    private configService: ConfigService,
+  ) {}
 
   @Public()
   @Post('convert/preview')
@@ -150,9 +154,19 @@ export class JobsController {
   })
   @ApiResponse({
     status: 400,
-    description: '잘못된 요청 (파일 없음, 잘못된 형식 등)',
+    description: '잘못된 요청 (파일 없음, 잘못된 형식, 파일 크기 초과 등)',
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @ApiResponse({
+    status: 413,
+    description: '파일 크기 초과 (최대 10MB)',
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB 제한 (환경 변수는 메서드 내에서 검증)
+      },
+    }),
+  )
   async preview(
     @UploadedFile() file: MulterFile,
     @Body() options: PreviewRequestDto,
@@ -164,6 +178,16 @@ export class JobsController {
     }
     if (!file.originalname.endsWith('.txt')) {
       throw new BadRequestException('Only .txt files are allowed');
+    }
+
+    // 파일 크기 검증 (환경 변수에서 가져온 값 사용)
+    const maxFileSize =
+      this.configService.get<number>('app.maxFileSize') || 10 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+      const maxSizeMB = (maxFileSize / (1024 * 1024)).toFixed(0);
+      throw new BadRequestException(
+        `File size exceeds the limit of ${maxSizeMB}MB`,
+      );
     }
     return this.jobsService.createPreview(
       file,
@@ -234,9 +258,19 @@ export class JobsController {
   })
   @ApiResponse({
     status: 400,
-    description: '잘못된 요청 (파일 없음, 잘못된 형식 등)',
+    description: '잘못된 요청 (파일 없음, 잘못된 형식, 파일 크기 초과 등)',
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @ApiResponse({
+    status: 413,
+    description: '파일 크기 초과 (최대 10MB)',
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB 제한 (환경 변수는 메서드 내에서 검증)
+      },
+    }),
+  )
   async createExcel(
     @UploadedFile() file: MulterFile,
     @Body() options: ExcelRequestDto,
@@ -249,6 +283,16 @@ export class JobsController {
     }
     if (!file.originalname.endsWith('.txt')) {
       throw new BadRequestException('Only .txt files are allowed');
+    }
+
+    // 파일 크기 검증 (환경 변수에서 가져온 값 사용)
+    const maxFileSize =
+      this.configService.get<number>('app.maxFileSize') || 10 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+      const maxSizeMB = (maxFileSize / (1024 * 1024)).toFixed(0);
+      throw new BadRequestException(
+        `File size exceeds the limit of ${maxSizeMB}MB`,
+      );
     }
     console.log(
       `[createExcel Controller] user: ${user ? `id=${user.id}, nickname=${user.nickname}` : 'null'}, guestSessionId: ${guestSessionId || 'null'}`,
