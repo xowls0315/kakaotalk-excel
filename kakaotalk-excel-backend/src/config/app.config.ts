@@ -11,4 +11,5 @@ export default registerAs('app', () => ({
     process.env.GUEST_SESSION_EXPIRES_IN_DAYS || '7',
     10,
   ),
+  maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10), // 기본 10MB (10 * 1024 * 1024 bytes)
 }));
