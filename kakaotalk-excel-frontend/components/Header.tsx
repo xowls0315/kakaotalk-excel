@@ -5,7 +5,8 @@ import { useAuthStore } from "@/store/useAuthStore";
 import LoginButton from "./LoginButton";
 
 export default function Header() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { isAuthenticated } = useAuthStore();
+  // AuthInitializer에서 인증 상태를 확인하므로 여기서는 확인하지 않음
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#F0F0F0] bg-[#FFFEF8]">

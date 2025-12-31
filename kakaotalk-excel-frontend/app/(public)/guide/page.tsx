@@ -74,7 +74,13 @@ export default function GuidePage() {
           <ul className="list-disc space-y-2 pl-6 text-gray-700">
             <li>대화가 많으면 변환에 조금 시간이 걸릴 수 있어요</li>
             <li>파일 크기는 최대 10MB까지 업로드할 수 있어요</li>
-            <li>로그인하면 변환했던 파일을 나중에 다시 받을 수 있어요</li>
+            <li>
+              로그인하면 변환했던 파일을 나중에 다시 받을 수 있어요
+              <br />
+              <span className="text-xs text-gray-600">
+                (💾 <strong>Excel 파일만</strong> 저장됩니다)
+              </span>
+            </li>
           </ul>
         </section>
       </div>

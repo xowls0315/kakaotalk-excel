@@ -198,10 +198,13 @@ export default function ResultPage() {
             <h2 className="mb-2 text-base font-semibold text-[#2F2F2F] sm:text-lg">
               로그인은 선택이에요
             </h2>
-            <p className="mb-4 text-xs text-gray-700 sm:mb-5 sm:text-sm">
+            <p className="mb-2 text-xs text-gray-700 sm:mb-3 sm:text-sm">
               로그인하면 변환했던 파일을 저장해두고
               <br />
               나중에 다시 받아볼 수 있어요.
+            </p>
+            <p className="mb-4 text-xs text-gray-600 sm:mb-5 sm:text-sm">
+              💾 <strong>Excel 파일만</strong> 저장됩니다 (CSV, PDF는 저장되지 않아요)
             </p>
             <a
               href={getLoginUrl()}
