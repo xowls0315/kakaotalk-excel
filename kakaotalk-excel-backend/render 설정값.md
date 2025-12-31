@@ -9,13 +9,16 @@ Render 대시보드의 **Environment** 섹션에 다음 환경 변수들을 설�
 ```env
 NODE_ENV=production
 PORT=10000
-FRONTEND_URL=https://your-frontend-domain.com
+FRONTEND_URL=http://localhost:3000
 ```
 
 **참고**:
 
 - Render는 자동으로 `PORT` 환경 변수를 제공하지만, 명시적으로 설정하는 것을 권장합니다
-- `FRONTEND_URL`은 프론트엔드가 배포된 URL로 설정하세요 (아직 없으면 임시로 `http://localhost:3000` 가능)
+- `FRONTEND_URL`은 프론트엔드 개발자가 로컬에서 개발할 때 사용하는 URL입니다
+  - 프론트엔드 개발자가 `localhost:3000`에서 개발하는 경우: `http://localhost:3000`
+  - 프론트엔드가 배포된 경우: 배포된 프론트엔드 URL (예: `https://your-frontend-domain.com`)
+- **중요**: 프론트엔드 개발자가 로컬에서 개발하는 경우 `http://localhost:3000`으로 설정해야 CORS 에러가 발생하지 않습니다
 
 ---
 
@@ -155,7 +158,8 @@ GUEST_SESSION_EXPIRES_IN_DAYS=7
 # 애플리케이션
 NODE_ENV=production
 PORT=10000
-FRONTEND_URL=https://your-frontend-domain.com
+FRONTEND_URL=http://localhost:3000  # 프론트엔드 개발자가 로컬에서 개발하는 경우
+# 또는 프론트엔드가 배포된 경우: FRONTEND_URL=https://your-frontend-domain.com
 
 # 데이터베이스
 DB_HOST=dpg-xxxxx-a.singapore-postgres.render.com
