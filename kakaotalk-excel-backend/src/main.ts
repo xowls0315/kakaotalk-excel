@@ -21,18 +21,44 @@ async function bootstrap() {
   // CORS 허용 origin 목록
   const allowedOrigins: string[] = [];
 
-  // 프론트엔드 URL이 있으면 추가
-  if (frontendUrl && !frontendUrl.includes('localhost')) {
+  // 프론트엔드 URL 추가 (localhost 포함)
+  if (frontendUrl) {
     allowedOrigins.push(frontendUrl);
+  }
+
+  // 개발 환경: localhost 포트들 명시적으로 허용
+  if (nodeEnv === 'development' || !nodeEnv || nodeEnv === '') {
+    allowedOrigins.push('http://localhost:3000');
+    allowedOrigins.push('http://localhost:3001');
   }
 
   // 프로덕션 환경에서는 Swagger UI도 허용 (현재 서버 URL)
   if (nodeEnv === 'production') {
     allowedOrigins.push('https://kakaotalk-excel-backend.onrender.com');
+    // 프로덕션에서도 localhost 허용 (프론트엔드 개발자가 로컬에서 테스트할 수 있도록)
+    if (frontendUrl && frontendUrl.includes('localhost')) {
+      allowedOrigins.push(frontendUrl);
+    }
   }
 
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true, // 개발 환경에서는 모든 origin 허용
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // origin이 없거나 (같은 도메인 요청) 허용된 origin이면 통과
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        // 개발 환경에서는 모든 origin 허용
+        if (nodeEnv === 'development' || !nodeEnv || nodeEnv === '') {
+          callback(null, true);
+        } else {
+          // 프로덕션: 허용되지 않은 origin 거부
+          callback(null, false);
+        }
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
