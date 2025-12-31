@@ -81,34 +81,7 @@ export class AuthController {
       // 프론트엔드 URL 확인
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
 
-      // 쿼리 파라미터로 JSON 반환 여부 확인 (백엔드만 실행했을 때 정보 확인용)
-      const format = req.query.format as string | undefined;
-      const returnJson = format === 'json' || format === 'JSON';
-
-      // JSON 반환 요청이 있으면 항상 JSON으로 반환 (백엔드 개발자용)
-      if (returnJson) {
-        return res.json({
-          success: true,
-          message: '로그인 성공! 아래 토큰을 사용하세요.',
-          accessToken,
-          refreshToken,
-          user: {
-            id: user.id,
-            nickname: user.nickname,
-            email: user.email,
-            provider: user.provider,
-          },
-          instructions: {
-            step1: '이 토큰을 사용하여 API를 호출할 수 있습니다',
-            step2:
-              '쿼리 파라미터 ?format=json을 제거하면 프론트엔드로 리다이렉트됩니다',
-            example:
-              'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
-          },
-        });
-      }
-
-      // FRONTEND_URL이 설정되어 있으면 프론트엔드로 리다이렉트
+      // FRONTEND_URL이 설정되어 있으면 항상 프론트엔드로 리다이렉트
       if (frontendUrl && frontendUrl.trim() !== '') {
         // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
         return res.redirect(
