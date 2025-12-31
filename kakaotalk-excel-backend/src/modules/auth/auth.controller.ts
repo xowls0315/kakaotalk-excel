@@ -78,59 +78,55 @@ export class AuthController {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7일
       });
 
-      // 개발 환경에서는 JSON으로 토큰 반환 (프론트엔드가 없을 때)
-      const nodeEnv = this.configService.get<string>('app.nodeEnv');
+      // 프론트엔드 URL 확인
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
 
-      // 프론트엔드 URL이 localhost이거나 설정되지 않은 경우 JSON으로 반환
-      if (
-        nodeEnv === 'development' ||
-        !frontendUrl ||
-        frontendUrl.includes('localhost')
-      ) {
-        // 개발 환경 또는 프론트엔드가 없는 경우: JSON으로 토큰 반환
-        return res.json({
-          success: true,
-          message: '로그인 성공! 아래 토큰을 사용하세요.',
-          accessToken,
-          refreshToken,
-          user: {
-            id: user.id,
-            nickname: user.nickname,
-            email: user.email,
-            provider: user.provider,
-          },
-          instructions: {
-            step1: '이 토큰을 사용하여 API를 호출할 수 있습니다',
-            step2: '프론트엔드가 배포되면 자동으로 리다이렉트됩니다',
-            example:
-              'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
-          },
-        });
+      // FRONTEND_URL이 설정되어 있으면 항상 프론트엔드로 리다이렉트
+      if (frontendUrl && frontendUrl.trim() !== '') {
+        // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
+        return res.redirect(
+          `${frontendUrl}/auth/callback?token=${accessToken}`,
+        );
       }
 
-      // 프로덕션: 프론트엔드로 리다이렉트
-      res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
+      // FRONTEND_URL이 설정되지 않은 경우에만 JSON으로 토큰 반환 (개발/테스트용)
+      return res.json({
+        success: true,
+        message: '로그인 성공! 아래 토큰을 사용하세요.',
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          nickname: user.nickname,
+          email: user.email,
+          provider: user.provider,
+        },
+        instructions: {
+          step1: '이 토큰을 사용하여 API를 호출할 수 있습니다',
+          step2: 'FRONTEND_URL 환경 변수를 설정하면 자동으로 리다이렉트됩니다',
+          example:
+            'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
+        },
+      });
     } catch (error: unknown) {
       console.error('Kakao callback error:', error);
-      const nodeEnv = this.configService.get<string>('app.nodeEnv');
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
 
       const errorMessage =
         error instanceof Error ? error.message : 'Authentication failed';
 
-      if (nodeEnv === 'development') {
-        // 개발 환경: 에러를 JSON으로 반환
-        return res.status(500).json({
-          success: false,
-          error: errorMessage,
-        });
+      // FRONTEND_URL이 설정되어 있으면 프론트엔드로 에러와 함께 리다이렉트
+      if (frontendUrl && frontendUrl.trim() !== '') {
+        return res.redirect(
+          `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
+        );
       }
 
-      // 프로덕션: 프론트엔드로 에러와 함께 리다이렉트
-      res.redirect(
-        `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
-      );
+      // FRONTEND_URL이 없는 경우에만 JSON으로 에러 반환
+      return res.status(500).json({
+        success: false,
+        error: errorMessage,
+      });
     }
   }
 
