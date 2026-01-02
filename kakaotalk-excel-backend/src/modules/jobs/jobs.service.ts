@@ -227,45 +227,84 @@ export class JobsService {
   }
 
   async findUserJobs(userId: number, status?: string, page = 1, size = 20) {
-    console.log(
-      `[findUserJobs] Searching for jobs with userId: ${userId}, status: ${status || 'all'}`,
-    );
-    const query = this.jobRepository
-      .createQueryBuilder('job')
-      .leftJoinAndSelect('job.jobFiles', 'files')
-      .where('job.userId = :userId', { userId })
-      .orderBy('job.createdAt', 'DESC');
+    try {
+      // 입력 검증
+      if (!userId || typeof userId !== 'number' || userId <= 0) {
+        console.error('[findUserJobs] Invalid userId:', userId);
+        throw new BadRequestException('Invalid user ID');
+      }
 
-    if (status) {
-      query.andWhere('job.status = :status', { status });
-    }
+      if (page < 1) {
+        throw new BadRequestException('Page must be greater than 0');
+      }
 
-    const skip = (page - 1) * size;
-    const [jobs, total] = await query.skip(skip).take(size).getManyAndCount();
+      if (size < 1 || size > 100) {
+        throw new BadRequestException('Size must be between 1 and 100');
+      }
 
-    console.log(`[findUserJobs] Found ${total} jobs for userId: ${userId}`);
-    if (jobs.length > 0) {
       console.log(
-        `[findUserJobs] First job: id=${jobs[0].id}, userId=${jobs[0].userId}, status=${jobs[0].status}`,
+        `[findUserJobs] Searching for jobs with userId: ${userId}, status: ${status || 'all'}`,
+      );
+
+      const query = this.jobRepository
+        .createQueryBuilder('job')
+        .leftJoinAndSelect('job.jobFiles', 'files')
+        .where('job.userId = :userId', { userId })
+        .orderBy('job.createdAt', 'DESC');
+
+      if (status) {
+        // 상태 검증
+        const validStatuses = [
+          'previewed',
+          'processing',
+          'success',
+          'failed',
+          'expired',
+        ];
+        if (!validStatuses.includes(status)) {
+          throw new BadRequestException(
+            `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+          );
+        }
+        query.andWhere('job.status = :status', { status });
+      }
+
+      const skip = (page - 1) * size;
+      const [jobs, total] = await query.skip(skip).take(size).getManyAndCount();
+
+      console.log(`[findUserJobs] Found ${total} jobs for userId: ${userId}`);
+      if (jobs.length > 0) {
+        console.log(
+          `[findUserJobs] First job: id=${jobs[0].id}, userId=${jobs[0].userId}, status=${jobs[0].status}`,
+        );
+      }
+
+      return {
+        jobs: jobs.map((job) => ({
+          id: job.id,
+          originalFileName: job.originalFileName,
+          status: job.status,
+          roomName: job.roomName,
+          totalMessages: job.totalMessages,
+          createdAt: job.createdAt,
+          finishedAt: job.finishedAt,
+          hasFile: job.jobFiles && job.jobFiles.length > 0,
+          fileExpiresAt: job.jobFiles?.[0]?.expiresAt,
+        })),
+        total,
+        page,
+        size,
+      };
+    } catch (error) {
+      console.error('[findUserJobs] Error:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      // 데이터베이스 에러 등
+      throw new BadRequestException(
+        'Failed to retrieve jobs. Please try again later.',
       );
     }
-
-    return {
-      jobs: jobs.map((job) => ({
-        id: job.id,
-        originalFileName: job.originalFileName,
-        status: job.status,
-        roomName: job.roomName,
-        totalMessages: job.totalMessages,
-        createdAt: job.createdAt,
-        finishedAt: job.finishedAt,
-        hasFile: job.jobFiles && job.jobFiles.length > 0,
-        fileExpiresAt: job.jobFiles?.[0]?.expiresAt,
-      })),
-      total,
-      page,
-      size,
-    };
   }
 
   async findOne(jobId: string, userId?: number) {

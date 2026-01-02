@@ -356,7 +356,28 @@ export class JobsController {
     @Query('page', new ParseIntPipe({ optional: true })) page = 1,
     @Query('size', new ParseIntPipe({ optional: true })) size = 20,
   ) {
-    return this.jobsService.findUserJobs(user.id, status, page, size);
+    // 사용자 정보 검증
+    if (!user) {
+      console.error('[getJobs] User is undefined');
+      throw new BadRequestException('User information is missing');
+    }
+    if (!user.id) {
+      console.error('[getJobs] User ID is missing', { user });
+      throw new BadRequestException('User ID is missing');
+    }
+
+    try {
+      console.log('[getJobs] Fetching jobs for user:', user.id);
+      return await this.jobsService.findUserJobs(user.id, status, page, size);
+    } catch (error) {
+      console.error('[getJobs] Error fetching jobs:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Failed to retrieve jobs. Please try again later.',
+      );
+    }
   }
 
   @UseGuards(JwtAuthGuard)
