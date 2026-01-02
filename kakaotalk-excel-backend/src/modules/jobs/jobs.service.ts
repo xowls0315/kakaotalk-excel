@@ -340,35 +340,95 @@ export class JobsService {
   }
 
   async downloadFile(jobId: string, userId: number): Promise<Buffer> {
-    const job = await this.jobRepository.findOne({
-      where: { id: jobId },
-      relations: ['jobFiles'],
-    });
-
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
-
-    if (userId && job.userId !== userId) {
-      throw new NotFoundException('Job not found');
-    }
-
-    if (!job.jobFiles || job.jobFiles.length === 0) {
-      throw new NotFoundException('File not found');
-    }
-
-    const jobFile = job.jobFiles[0];
-    if (new Date() > jobFile.expiresAt) {
-      job.status = JobStatus.EXPIRED;
-      await this.jobRepository.save(job);
-      throw new BadRequestException('File has expired');
-    }
-
     try {
-      const buffer = await fs.readFile(jobFile.pathOrUrl);
-      return buffer;
+      // 입력 검증
+      if (!jobId || typeof jobId !== 'string' || jobId.trim() === '') {
+        console.error('[downloadFile] Invalid jobId:', jobId);
+        throw new BadRequestException('Invalid job ID');
+      }
+
+      if (!userId || typeof userId !== 'number' || userId <= 0) {
+        console.error('[downloadFile] Invalid userId:', userId);
+        throw new BadRequestException('Invalid user ID');
+      }
+
+      console.log(
+        `[downloadFile] Searching for job: ${jobId}, userId: ${userId}`,
+      );
+
+      const job = await this.jobRepository.findOne({
+        where: { id: jobId },
+        relations: ['jobFiles'],
+      });
+
+      if (!job) {
+        console.error(`[downloadFile] Job not found: ${jobId}`);
+        throw new NotFoundException('Job not found');
+      }
+
+      console.log(
+        `[downloadFile] Job found - id: ${job.id}, userId: ${job.userId}, status: ${job.status}`,
+      );
+
+      // 사용자 권한 확인
+      if (job.userId !== userId) {
+        console.error(
+          `[downloadFile] User ${userId} does not have access to job ${jobId} (job.userId: ${job.userId})`,
+        );
+        throw new NotFoundException('Job not found');
+      }
+
+      if (!job.jobFiles || job.jobFiles.length === 0) {
+        console.error(`[downloadFile] No files found for job: ${jobId}`);
+        throw new NotFoundException('File not found');
+      }
+
+      const jobFile = job.jobFiles[0];
+      console.log(
+        `[downloadFile] File found - path: ${jobFile.pathOrUrl}, expiresAt: ${jobFile.expiresAt}`,
+      );
+
+      // 만료 확인
+      const now = new Date();
+      if (now > jobFile.expiresAt) {
+        console.error(
+          `[downloadFile] File expired - expiresAt: ${jobFile.expiresAt.toISOString()}, current: ${now.toISOString()}`,
+        );
+        job.status = JobStatus.EXPIRED;
+        await this.jobRepository.save(job);
+        throw new BadRequestException('File has expired');
+      }
+
+      // 파일 읽기
+      try {
+        console.log(`[downloadFile] Reading file from: ${jobFile.pathOrUrl}`);
+        const buffer = await fs.readFile(jobFile.pathOrUrl);
+        console.log(
+          `[downloadFile] File read successful - size: ${buffer.length} bytes`,
+        );
+        return buffer;
+      } catch (error) {
+        console.error(
+          `[downloadFile] Error reading file from disk: ${jobFile.pathOrUrl}`,
+          error,
+        );
+        if (error instanceof Error) {
+          console.error('[downloadFile] Error message:', error.message);
+          console.error('[downloadFile] Error stack:', error.stack);
+        }
+        throw new NotFoundException('File not found on disk');
+      }
     } catch (error) {
-      throw new NotFoundException('File not found on disk');
+      console.error('[downloadFile] Error:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Failed to download file. Please try again later.',
+      );
     }
   }
 
