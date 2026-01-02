@@ -84,21 +84,85 @@ export default function Home() {
 
         {/* Login CTA */}
         {!isAuthenticated && (
-          <section className="mb-16 rounded-2xl border border-[#FBE27A] bg-[#FFF8D8] p-6 text-center sm:mb-24 sm:p-10">
-            <h2 className="mb-3 text-lg font-semibold text-[#2F2F2F] sm:mb-4 sm:text-xl">
-              로그인은 선택이에요 🙂
-            </h2>
-            <p className="mb-5 text-sm text-gray-600 sm:mb-6 sm:text-base">
-              로그인하면 변환 기록을 저장해두고
-              <br />
-              나중에 다시 내려받을 수 있어요.
-            </p>
-            <Link
-              href="/upload"
-              className="inline-block rounded-lg bg-[#FBE27A] px-6 py-3 text-sm font-semibold text-[#2F2F2F] transition hover:bg-[#fff0b3] sm:text-base"
-            >
-              일단 한 번 써볼게요
-            </Link>
+          <section className="mb-16 rounded-2xl border border-[#FBE27A] bg-[#FFF8D8] p-6 sm:mb-24 sm:p-10">
+            <div className="text-center mb-6">
+              <h2 className="mb-3 text-lg font-semibold text-[#2F2F2F] sm:mb-4 sm:text-xl">
+                로그인은 선택이에요 🙂
+              </h2>
+              <p className="text-sm text-gray-600 sm:text-base">
+                하지만 로그인하면 더 편리하게 사용할 수 있어요!
+              </p>
+            </div>
+            
+            <div className="mb-6 space-y-3 text-left">
+              <div className="flex items-start gap-3">
+                <span className="text-lg sm:text-xl">💾</span>
+                <div>
+                  <p className="text-sm font-medium text-[#2F2F2F] sm:text-base">
+                    변환 기록 자동 저장
+                  </p>
+                  <p className="text-xs text-gray-600 sm:text-sm">
+                    Excel 파일이 자동으로 저장되어 언제든지 다시 다운로드할 수 있어요
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <span className="text-lg sm:text-xl">📋</span>
+                <div>
+                  <p className="text-sm font-medium text-[#2F2F2F] sm:text-base">
+                    내 기록에서 관리
+                  </p>
+                  <p className="text-xs text-gray-600 sm:text-sm">
+                    변환했던 모든 파일을 한 곳에서 확인하고 관리할 수 있어요
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <span className="text-lg sm:text-xl">📊</span>
+                <div>
+                  <p className="text-sm font-medium text-[#2F2F2F] sm:text-base">
+                    작업 통계 확인
+                  </p>
+                  <p className="text-xs text-gray-600 sm:text-sm">
+                    전체, 완료, 처리 중 등 작업 상태별로 필터링해서 볼 수 있어요
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <span className="text-lg sm:text-xl">🔒</span>
+                <div>
+                  <p className="text-sm font-medium text-[#2F2F2F] sm:text-base">
+                    안전한 저장
+                  </p>
+                  <p className="text-xs text-gray-600 sm:text-sm">
+                    카카오 계정으로 간편하게 로그인하고 안전하게 보관해요
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <p className="mb-4 text-xs text-gray-500 sm:text-sm">
+                💡 로그인 없이도 사용 가능하지만, 로그인하면 더 많은 기능을 이용할 수 있어요
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/login"
+                  className="w-full rounded-lg bg-[#3FAF8E] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#2d8d73] sm:w-auto sm:text-base"
+                >
+                  로그인하고 시작하기
+                </Link>
+                <Link
+                  href="/upload"
+                  className="w-full rounded-lg border border-[#3FAF8E] bg-white px-6 py-3 text-sm font-semibold text-[#3FAF8E] transition hover:bg-[#EAF7F2] sm:w-auto sm:text-base"
+                >
+                  로그인 없이 시작하기
+                </Link>
+              </div>
+            </div>
           </section>
         )}
       </div>

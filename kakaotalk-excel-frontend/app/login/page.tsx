@@ -1,9 +1,41 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getLoginUrl } from "@/lib/auth";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { isAuthenticated, checkAuthStatus } = useAuthStore();
+
+  // 이미 로그인된 상태라면 redirect 파라미터가 있으면 그 페이지로, 없으면 메인으로 리다이렉트
+  // refreshToken이 쿠키에 있으면 자동으로 accessToken 갱신
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (!isAuthenticated) {
+        await checkAuthStatus();
+      }
+      // 인증 상태 확인 후에도 로그인되어 있으면 리다이렉트
+      if (isAuthenticated) {
+        const redirectPath = searchParams.get("redirect");
+        if (redirectPath) {
+          router.push(decodeURIComponent(redirectPath));
+        } else {
+          router.push("/");
+        }
+      }
+    };
+    checkAuth();
+  }, [isAuthenticated, router, checkAuthStatus, searchParams]);
+
+  // 이미 로그인된 상태면 아무것도 렌더링하지 않음 (리다이렉트 중)
+  if (isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-[#FFFEF8] dark:bg-[#0F1411] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
@@ -31,6 +63,10 @@ export default function LoginPage() {
                 </h3>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   변환한 파일을 저장해두고 나중에 다시 다운로드할 수 있어요
+                  <br />
+                  <span className="text-[#3FAF8E]">
+                    💾 Excel 파일만 저장됩니다
+                  </span>
                 </p>
               </div>
             </div>
