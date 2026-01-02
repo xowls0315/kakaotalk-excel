@@ -70,23 +70,27 @@ export class AuthController {
 
       const { accessToken, refreshToken } = await this.authService.login(user);
 
-      // Refresh Token을 쿠키에 저장
+      const nodeEnv = this.configService.get<string>('app.nodeEnv');
+      const isProduction = nodeEnv === 'production';
+
+      // Refresh Token을 쿠키에 저장 (개선된 설정)
       res.cookie('refresh_token', refreshToken, {
         httpOnly: true,
-        sameSite: 'lax',
-        secure: this.configService.get('app.nodeEnv') === 'production',
+        sameSite: isProduction ? 'none' : 'lax', // 프로덕션에서는 cross-site 쿠키 허용
+        secure: isProduction, // 프로덕션에서만 HTTPS 필수
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7일
+        path: '/', // 모든 경로에서 쿠키 접근 가능
       });
+
+      // 쿼리 파라미터로 JSON 응답 요청 확인 (백엔드 테스트용)
+      const format = req.query.format as string;
+      const isJsonRequest = format === 'json';
 
       // 프론트엔드 URL 확인
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
 
-      // 쿼리 파라미터로 JSON 반환 여부 확인 (백엔드만 실행했을 때 정보 확인용)
-      const format = req.query.format as string | undefined;
-      const returnJson = format === 'json' || format === 'JSON';
-
-      // JSON 반환 요청이 있으면 항상 JSON으로 반환 (백엔드 개발자용)
-      if (returnJson) {
+      // JSON 요청이거나 FRONTEND_URL이 없는 경우 JSON 반환
+      if (isJsonRequest || !frontendUrl || frontendUrl.trim() === '') {
         return res.json({
           success: true,
           message: '로그인 성공! 아래 토큰을 사용하세요.',
@@ -101,59 +105,69 @@ export class AuthController {
           instructions: {
             step1: '이 토큰을 사용하여 API를 호출할 수 있습니다',
             step2:
-              '쿼리 파라미터 ?format=json을 제거하면 프론트엔드로 리다이렉트됩니다',
+              '?format=json을 URL에 추가하면 항상 JSON 응답을 받을 수 있습니다',
+            step3:
+              'FRONTEND_URL 환경 변수를 설정하면 자동으로 리다이렉트됩니다',
             example:
               'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
           },
         });
       }
 
-      // FRONTEND_URL이 설정되어 있으면 프론트엔드로 리다이렉트
-      if (frontendUrl && frontendUrl.trim() !== '') {
-        // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
-        return res.redirect(
-          `${frontendUrl}/auth/callback?token=${accessToken}`,
-        );
+      // Referer 확인: 브라우저에서 직접 접근한 경우에만 리다이렉트
+      const referer = req.get('referer') || '';
+      const isDirectBrowserAccess =
+        referer.includes('kakaotalk-excel-backend.onrender.com') ||
+        referer === '' ||
+        referer.includes('localhost');
+
+      // 프론트엔드 URL이 localhost를 포함하고 있고, 브라우저에서 직접 접근한 경우에만 리다이렉트
+      // 그 외의 경우(예: Render 서버에서 직접 호출)는 JSON 반환
+      if (frontendUrl.includes('localhost') && !isDirectBrowserAccess) {
+        // Render 서버에서 직접 호출한 경우 JSON 반환
+        return res.json({
+          success: true,
+          message: '로그인 성공! 아래 토큰을 사용하세요.',
+          accessToken,
+          refreshToken,
+          user: {
+            id: user.id,
+            nickname: user.nickname,
+            email: user.email,
+            provider: user.provider,
+          },
+          note: '프론트엔드가 localhost에서 실행 중이지 않아 JSON으로 반환합니다.',
+          instructions: {
+            step1: '프론트엔드를 localhost:3000에서 실행하세요',
+            step2: '또는 ?format=json을 URL에 추가하여 JSON 응답을 받으세요',
+            example:
+              'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
+          },
+        });
       }
 
-      // FRONTEND_URL이 설정되지 않은 경우에만 JSON으로 토큰 반환 (개발/테스트용)
-      return res.json({
-        success: true,
-        message: '로그인 성공! 아래 토큰을 사용하세요.',
-        accessToken,
-        refreshToken,
-        user: {
-          id: user.id,
-          nickname: user.nickname,
-          email: user.email,
-          provider: user.provider,
-        },
-        instructions: {
-          step1: '이 토큰을 사용하여 API를 호출할 수 있습니다',
-          step2: 'FRONTEND_URL 환경 변수를 설정하면 자동으로 리다이렉트됩니다',
-          example:
-            'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
-        },
-      });
+      // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
+      return res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
     } catch (error: unknown) {
       console.error('Kakao callback error:', error);
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
+      const format = (req.query.format as string) || '';
 
       const errorMessage =
         error instanceof Error ? error.message : 'Authentication failed';
 
-      // FRONTEND_URL이 설정되어 있으면 프론트엔드로 에러와 함께 리다이렉트
-      if (frontendUrl && frontendUrl.trim() !== '') {
-        return res.redirect(
-          `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
-        );
+      // JSON 요청이거나 FRONTEND_URL이 없는 경우 JSON으로 에러 반환
+      if (format === 'json' || !frontendUrl || frontendUrl.trim() === '') {
+        return res.status(500).json({
+          success: false,
+          error: errorMessage,
+        });
       }
 
-      // FRONTEND_URL이 없는 경우에만 JSON으로 에러 반환
-      return res.status(500).json({
-        success: false,
-        error: errorMessage,
-      });
+      // 프론트엔드로 에러와 함께 리다이렉트
+      return res.redirect(
+        `${frontendUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`,
+      );
     }
   }
 

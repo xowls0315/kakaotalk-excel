@@ -43,52 +43,87 @@ npm run dev
 
 프론트엔드에 `/auth/callback` 경로를 처리하는 페이지/컴포넌트를 만드세요.
 
-#### React + React Router 예시
+#### React + React Router 예시 (개선된 버전)
 
 ```typescript
 // src/pages/AuthCallback.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [status, setStatus] = useState<string>('처리 중...');
 
   useEffect(() => {
     const token = searchParams.get('token');
     const error = searchParams.get('error');
 
-    if (error) {
-      // 에러 처리
-      console.error('로그인 실패:', decodeURIComponent(error));
-      // 에러 페이지로 리다이렉트 또는 에러 메시지 표시
-      navigate('/login?error=' + encodeURIComponent(error));
-      return;
-    }
+    const handleAuth = async () => {
+      if (error) {
+        // 에러 처리
+        console.error('로그인 실패:', decodeURIComponent(error));
+        setStatus('로그인 실패');
+        setTimeout(() => {
+          navigate('/login?error=' + encodeURIComponent(error));
+        }, 2000);
+        return;
+      }
 
-    if (token) {
-      // ✅ 토큰 저장
-      localStorage.setItem('accessToken', token);
+      if (token) {
+        try {
+          // ✅ 토큰 저장
+          localStorage.setItem('accessToken', token);
 
-      // ✅ 사용자 정보 가져오기 (선택사항)
-      // fetchUserInfo(token);
+          // ✅ 사용자 정보 가져오기 (선택사항)
+          try {
+            const userResponse = await axios.get(
+              'https://kakaotalk-excel-backend.onrender.com/auth/me',
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            console.log('사용자 정보:', userResponse.data);
+            // 사용자 정보를 상태 관리에 저장 (Redux, Zustand 등)
+          } catch (userError) {
+            console.error('사용자 정보 가져오기 실패:', userError);
+          }
 
-      // ✅ 메인 페이지로 리다이렉트
-      navigate('/');
-    } else {
-      // 토큰이 없는 경우 로그인 페이지로 리다이렉트
-      navigate('/login');
-    }
+          setStatus('로그인 성공!');
+          // ✅ 메인 페이지로 리다이렉트
+          setTimeout(() => {
+            navigate('/');
+          }, 1000);
+        } catch (err) {
+          console.error('토큰 저장 실패:', err);
+          setStatus('오류 발생');
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
+      } else {
+        // 토큰이 없는 경우 로그인 페이지로 리다이렉트
+        setStatus('토큰이 없습니다');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      }
+    };
+
+    handleAuth();
   }, [searchParams, navigate]);
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh'
-    }}>
-      <div>로그인 처리 중...</div>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+      }}
+    >
+      <div>{status}</div>
     </div>
   );
 }
@@ -264,7 +299,153 @@ FRONTEND_URL=http://localhost:3000
 
 ---
 
+### 문제 4: 새로고침 시 로그인이 풀리는 문제
+
+**원인**:
+
+- Access Token이 만료되었거나 저장되지 않음
+- Refresh Token 쿠키가 제대로 전송되지 않음
+- 토큰 재발급 로직이 구현되지 않음
+
+**해결**:
+
+1. **토큰 저장 확인**: 콜백 페이지에서 토큰을 반드시 저장하세요.
+
+```typescript
+// ✅ 올바른 방법: 토큰을 localStorage에 저장
+if (token) {
+  localStorage.setItem('accessToken', token);
+  // 또는 상태 관리 라이브러리 사용 (Redux, Zustand 등)
+}
+```
+
+2. **앱 시작 시 토큰 확인**: 앱이 시작될 때 토큰이 있는지 확인하고, 없으면 Refresh Token으로 재발급 시도
+
+```typescript
+// src/App.tsx 또는 최상위 컴포넌트
+import { useEffect } from 'react';
+import axios from 'axios';
+
+function App() {
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        // Refresh Token으로 Access Token 재발급 시도
+        try {
+          const response = await axios.post(
+            'https://kakaotalk-excel-backend.onrender.com/auth/refresh',
+            {},
+            { withCredentials: true } // 쿠키 전송 필수!
+          );
+          localStorage.setItem('accessToken', response.data.accessToken);
+        } catch (error) {
+          // Refresh 실패 시 로그인 페이지로
+          localStorage.removeItem('accessToken');
+          window.location.href = '/login';
+        }
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  return <div>...</div>;
+}
+```
+
+3. **Axios 인터셉터 개선**: 401 에러 시 자동으로 토큰 재발급
+
+```typescript
+// src/lib/api.ts
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    // 401 에러이고, 아직 재시도하지 않은 경우
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        // Refresh Token으로 Access Token 재발급
+        const response = await axios.post(
+          'https://kakaotalk-excel-backend.onrender.com/auth/refresh',
+          {},
+          { withCredentials: true }, // ⚠️ 쿠키 전송 필수!
+        );
+
+        const newToken = response.data.accessToken;
+        localStorage.setItem('accessToken', newToken);
+
+        // 원래 요청 재시도
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        // Refresh 실패 시 로그인 페이지로
+        localStorage.removeItem('accessToken');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);
+```
+
+4. **쿠키 설정 확인**: `withCredentials: true`를 모든 API 요청에 포함
+
+```typescript
+const apiClient = axios.create({
+  baseURL: 'https://kakaotalk-excel-backend.onrender.com',
+  withCredentials: true, // ⚠️ 모든 요청에 쿠키 포함
+});
+```
+
+---
+
+### 문제 5: 백엔드 테스트 시 JSON 응답 받기
+
+**상황**: Render 배포 사이트에서 직접 카카오 로그인을 테스트할 때 JSON 응답이 필요함
+
+**해결**: URL에 `?format=json` 쿼리 파라미터를 추가하세요.
+
+```
+https://kakaotalk-excel-backend.onrender.com/auth/kakao/callback?format=json
+```
+
+이렇게 하면 프론트엔드로 리다이렉트되지 않고 JSON으로 토큰 정보를 받을 수 있습니다.
+
+**예시 응답**:
+
+```json
+{
+  "success": true,
+  "message": "로그인 성공! 아래 토큰을 사용하세요.",
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 1,
+    "nickname": "홍길동",
+    "email": null,
+    "provider": "kakao"
+  },
+  "instructions": {
+    "step1": "이 토큰을 사용하여 API를 호출할 수 있습니다",
+    "step2": "?format=json을 URL에 추가하면 항상 JSON 응답을 받을 수 있습니다",
+    "step3": "FRONTEND_URL 환경 변수를 설정하면 자동으로 리다이렉트됩니다",
+    "example": "GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)"
+  }
+}
+```
+
+---
+
 ## 📝 전체 플로우 요약
+
+### 프론트엔드 개발자용 플로우
 
 ```
 1. 사용자가 "카카오 로그인" 버튼 클릭
@@ -280,16 +461,40 @@ FRONTEND_URL=http://localhost:3000
 6. 백엔드: 토큰 생성 후 프론트엔드로 리다이렉트
    http://localhost:3000/auth/callback?token=...
    ↓
-7. 프론트엔드: /auth/callback 페이지에서 토큰 받아서 저장
+7. 프론트엔드: /auth/callback 페이지에서 토큰 받아서 localStorage에 저장
    ↓
 8. 프론트엔드: 메인 페이지로 리다이렉트
+   ↓
+9. 새로고침 시: localStorage의 토큰 확인 또는 Refresh Token으로 재발급
+```
+
+### 백엔드 개발자 테스트용 플로우
+
+```
+1. 브라우저에서 직접 접속:
+   https://kakaotalk-excel-backend.onrender.com/auth/kakao?format=json
+   ↓
+2. 카카오 로그인 완료
+   ↓
+3. 백엔드 콜백 URL로 리다이렉트:
+   https://kakaotalk-excel-backend.onrender.com/auth/kakao/callback?format=json
+   ↓
+4. JSON 응답으로 토큰 정보 받기 (리다이렉트 없음)
+   {
+     "success": true,
+     "accessToken": "...",
+     "refreshToken": "...",
+     "user": {...}
+   }
+   ↓
+5. 받은 accessToken을 복사하여 Swagger UI나 Postman에서 테스트
 ```
 
 ---
 
 ## ✅ 체크리스트
 
-프론트엔드 개발자가 확인해야 할 사항:
+### 프론트엔드 개발자 체크리스트
 
 - [ ] 프론트엔드가 `http://localhost:3000`에서 실행 중인가?
 - [ ] `/auth/callback` 경로가 라우터에 등록되어 있는가?
@@ -297,6 +502,15 @@ FRONTEND_URL=http://localhost:3000
 - [ ] 토큰을 `localStorage` 또는 상태 관리에 저장하는가?
 - [ ] API 호출 시 `Authorization: Bearer {token}` 헤더를 포함하는가?
 - [ ] 에러 처리 (`error` 쿼리 파라미터)를 구현했는가?
+- [ ] **새로고침 시 로그인 유지**: 앱 시작 시 토큰 확인 및 Refresh Token으로 재발급 로직 구현
+- [ ] **Axios 인터셉터**: 401 에러 시 자동 토큰 재발급 로직 구현
+- [ ] **쿠키 전송**: `withCredentials: true` 설정 확인
+
+### 백엔드 개발자 테스트 체크리스트
+
+- [ ] `?format=json` 파라미터로 JSON 응답 받기 테스트
+- [ ] 받은 `accessToken`으로 `/auth/me` API 호출 테스트
+- [ ] Refresh Token 쿠키가 제대로 설정되는지 확인
 
 ---
 
@@ -319,35 +533,46 @@ export default function LoginButton() {
 }
 ```
 
-### 2. 콜백 페이지 (최소 구현)
+### 2. 콜백 페이지 (최소 구현 - 개선된 버전)
 
 ```typescript
 // src/pages/AuthCallback.tsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export default function AuthCallback() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const [status, setStatus] = useState<string>('처리 중...');
 
   useEffect(() => {
     const token = searchParams.get('token');
     const error = searchParams.get('error');
 
     if (error) {
-      navigate('/login?error=' + encodeURIComponent(error));
+      setStatus('로그인 실패');
+      setTimeout(() => {
+        navigate('/login?error=' + encodeURIComponent(error));
+      }, 2000);
       return;
     }
 
     if (token) {
+      // ✅ 토큰 저장 (새로고침 시 로그인 유지를 위해 필수!)
       localStorage.setItem('accessToken', token);
-      navigate('/');
+      setStatus('로그인 성공!');
+      setTimeout(() => {
+        navigate('/');
+      }, 1000);
     } else {
-      navigate('/login');
+      setStatus('토큰이 없습니다');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     }
   }, [searchParams, navigate]);
 
-  return <div>로그인 처리 중...</div>;
+  return <div>{status}</div>;
 }
 ```
 
