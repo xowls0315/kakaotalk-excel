@@ -100,7 +100,10 @@ export class AuthService {
 
     // Refresh Token 만료 시간 계산
     const expiresAt = new Date();
-    const refreshExpiresInDays = parseInt(refreshExpiresIn.replace('d', ''), 10);
+    const refreshExpiresInDays = parseInt(
+      refreshExpiresIn.replace('d', ''),
+      10,
+    );
     expiresAt.setDate(expiresAt.getDate() + refreshExpiresInDays);
 
     // 기존 Refresh Token 삭제
@@ -127,17 +130,29 @@ export class AuthService {
 
   async refreshToken(refreshTokenString: string) {
     try {
+      console.log('[refreshToken] Starting token refresh process');
+
       // Refresh Token 검증 (별도의 secret 사용)
       const refreshSecret = this.configService.get<string>('jwt.refreshSecret');
       if (!refreshSecret) {
+        console.error('[refreshToken] JWT refresh secret is missing');
         throw new UnauthorizedException('JWT refresh secret is missing');
       }
-      const payload = verify(refreshTokenString, refreshSecret) as unknown as {
-        sub: number;
-        type?: string;
-      };
+
+      let payload: { sub: number; type?: string };
+      try {
+        payload = verify(refreshTokenString, refreshSecret) as unknown as {
+          sub: number;
+          type?: string;
+        };
+        console.log('[refreshToken] Token verified, userId:', payload.sub);
+      } catch (verifyError) {
+        console.error('[refreshToken] Token verification failed:', verifyError);
+        throw new UnauthorizedException('Invalid refresh token');
+      }
 
       if (payload.type !== 'refresh') {
+        console.error('[refreshToken] Invalid token type:', payload.type);
         throw new UnauthorizedException('Invalid token type');
       }
 
@@ -151,19 +166,33 @@ export class AuthService {
       });
 
       if (!storedToken) {
+        console.error(
+          '[refreshToken] Refresh token not found in DB for userId:',
+          payload.sub,
+        );
         throw new UnauthorizedException('Refresh token not found');
       }
 
       // 만료 확인
       if (new Date() > storedToken.expiresAt) {
+        console.error(
+          '[refreshToken] Refresh token expired:',
+          storedToken.expiresAt,
+        );
         await this.refreshTokenRepository.remove(storedToken);
         throw new UnauthorizedException('Refresh token expired');
       }
 
       const user = storedToken.user;
       if (!user) {
+        console.error('[refreshToken] User not found for stored token');
         throw new UnauthorizedException('User not found');
       }
+
+      console.log(
+        '[refreshToken] User found, generating new access token for userId:',
+        user.id,
+      );
 
       // 새 Access Token 생성
       const newPayload: JwtPayload = {
@@ -196,4 +225,3 @@ export class AuthService {
     });
   }
 }
-
