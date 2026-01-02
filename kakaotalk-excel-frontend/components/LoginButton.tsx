@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logout as apiLogout } from "@/lib/auth";
@@ -28,7 +29,19 @@ export default function LoginButton() {
     return (
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-[#2F2F2F]">
-          {user?.name ? `${user.name} 님 안녕하세요!` : "안녕하세요!"}
+          {user?.name ? (
+            <>
+              <Link
+                href="/profile"
+                className="bg-yellow-100 px-1 rounded hover:bg-yellow-200 transition cursor-pointer"
+              >
+                {user.name}
+              </Link>{" "}
+              님 안녕하세요!
+            </>
+          ) : (
+            "안녕하세요!"
+          )}
         </span>
         <button
           onClick={handleLogout}

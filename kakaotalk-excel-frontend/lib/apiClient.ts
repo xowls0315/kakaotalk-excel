@@ -8,22 +8,23 @@ import { getAccessToken, useAuthStore } from "@/store/useAuthStore";
 function checkCookieDomainIssue(): void {
   if (typeof window === "undefined") return;
 
+  const windowWithCheck = window as Window & { __cookieCheckDone?: boolean };
+  if (windowWithCheck.__cookieCheckDone) return;
+
   const currentOrigin = window.location.origin;
   const apiBaseUrl = API_BASE_URL;
 
-  // 로컬 개발 환경에서 크로스 도메인 문제 확인
+  // 로컬 개발 환경에서 크로스 도메인 문제 확인 (한 번만)
+  // 디버그 레벨로 변경하여 콘솔 노이즈 감소
   if (
     process.env.NODE_ENV === "development" &&
     currentOrigin.includes("localhost:3000") &&
     apiBaseUrl.includes("onrender.com")
   ) {
-    console.warn("⚠️ 크로스 도메인 쿠키 전송 문제 가능성:");
-    console.warn(`프론트엔드: ${currentOrigin}`);
-    console.warn(`백엔드: ${apiBaseUrl}`);
-    console.warn(
-      "해결 방법: .env.local에 NEXT_PUBLIC_API_BASE_URL=http://localhost:3001 설정"
-    );
-    console.warn("또는 백엔드를 localhost:3001에서 실행하세요.");
+    console.debug("ℹ️ 크로스 도메인 환경: 로컬 프론트엔드 → 프로덕션 백엔드");
+    console.debug("로컬 백엔드를 사용하려면 .env.local에 다음을 추가하세요:");
+    console.debug("NEXT_PUBLIC_API_BASE_URL=http://localhost:3001");
+    windowWithCheck.__cookieCheckDone = true;
   }
 }
 
@@ -44,7 +45,14 @@ export class ApiClientError extends Error {
 
 /**
  * Fetch wrapper with credentials and error handling
- * Access Token은 메모리에서 가져오고, Refresh Token은 쿠키에서 자동 전송됨
+ *
+ * 주요 기능:
+ * 1. 모든 요청에 credentials: "include" 포함 (HttpOnly 쿠키인 refreshToken 자동 전송)
+ * 2. 401 에러 시 자동으로 refreshToken으로 accessToken 재발급 후 재시도
+ * 3. Access Token은 메모리(useAuthStore)에서 가져오고, Refresh Token은 쿠키에서 자동 전송됨
+ *
+ * ⚠️ 중요: credentials: "include"는 반드시 필요!
+ * refreshToken이 HttpOnly 쿠키로 저장되어 있으므로 자동으로 전송되려면 이 옵션이 필수
  */
 export async function apiClient<T>(
   endpoint: string,
@@ -80,26 +88,30 @@ export async function apiClient<T>(
   try {
     const response = await fetch(url, {
       ...options,
-      credentials: "include", // Include cookies (Refresh Token 자동 전송)
+      credentials: "include", // ⚠️ 필수! HttpOnly 쿠키(refreshToken) 자동 전송
       headers,
     });
 
     // 401 Unauthorized 처리 - refreshToken으로 accessToken 갱신 시도
     // 단, /auth/refresh 엔드포인트 자체는 제외 (무한 루프 방지)
+    // retry 플래그로 이미 재시도한 경우를 방지
+    const requestOptions = options as RequestInit & { _retry?: boolean };
     if (
       response.status === 401 &&
       accessToken &&
-      !endpoint.includes("/auth/refresh")
+      !endpoint.includes("/auth/refresh") &&
+      !requestOptions._retry
     ) {
+      if (process.env.NODE_ENV === "development") {
+        console.debug(
+          `🔄 [apiClient] 401 error on ${endpoint}, attempting token refresh...`
+        );
+      }
+
       try {
         // refreshToken을 사용하여 accessToken 재발급 시도
-        // 디버깅: 쿠키 전송 확인
-        if (process.env.NODE_ENV === "development") {
-          console.log("Attempting to refresh token with cookie...");
-          console.log("Refresh URL:", `${API_BASE_URL}/auth/refresh`);
-        }
-
-        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        const refreshUrl = `${API_BASE_URL}/auth/refresh`;
+        const refreshResponse = await fetch(refreshUrl, {
           method: "POST",
           credentials: "include", // HttpOnly Cookie 자동 전송 (SameSite 설정 필요)
           headers: {
@@ -107,13 +119,10 @@ export async function apiClient<T>(
           },
         });
 
-        // 디버깅: 응답 상태 확인
         if (process.env.NODE_ENV === "development") {
-          console.log("Refresh response status:", refreshResponse.status);
-          if (!refreshResponse.ok) {
-            const errorText = await refreshResponse.clone().text();
-            console.warn("Refresh failed:", errorText);
-          }
+          console.debug(
+            `🔄 [apiClient] Refresh response status: ${refreshResponse.status}`
+          );
         }
 
         if (refreshResponse.ok) {
@@ -121,7 +130,14 @@ export async function apiClient<T>(
           if (refreshData.accessToken) {
             // 새로운 accessToken을 메모리에 저장
             useAuthStore.getState().setAccessToken(refreshData.accessToken);
-            // 원래 요청을 새로운 토큰으로 재시도
+
+            if (process.env.NODE_ENV === "development") {
+              console.debug(
+                `✅ [apiClient] Token refreshed, retrying original request...`
+              );
+            }
+
+            // 원래 요청을 새로운 토큰으로 재시도 (무한 루프 방지를 위해 _retry 플래그 추가)
             const retryHeaders: Record<string, string> = {
               "Content-Type": "application/json",
               ...(options.headers as Record<string, string>),
@@ -130,13 +146,24 @@ export async function apiClient<T>(
             return apiClient<T>(endpoint, {
               ...options,
               headers: retryHeaders,
-            });
+              _retry: true, // 재시도 플래그 (무한 루프 방지)
+            } as RequestInit & { _retry?: boolean });
           }
         } else if (refreshResponse.status === 401) {
-          // refreshToken도 만료되었거나 없음 - 조용히 로그인되지 않은 상태로 처리
-          // 로그인 페이지로 리다이렉트하지 않음 (사용자가 직접 로그인할 수 있도록)
+          // refreshToken도 만료되었거나 없음
+          // accessToken은 localStorage에 유지 (다음 로그인 시 사용 가능)
+          // 메모리 상태만 초기화
+          if (process.env.NODE_ENV === "development") {
+            console.debug(
+              "ℹ️ [apiClient] Refresh token expired, but keeping accessToken in localStorage"
+            );
+          }
+
+          // 메모리에서만 제거 (localStorage는 유지)
           useAuthStore.getState().setAccessToken(null);
-          useAuthStore.getState().logout();
+          // logout은 호출하지 않음 (localStorage 토큰 유지)
+          useAuthStore.getState().setUser(null);
+          
           // 원래 요청의 401 에러를 그대로 throw (리다이렉트 없이)
           throw new ApiClientError(
             "Session expired. Please log in again.",
@@ -146,16 +173,23 @@ export async function apiClient<T>(
       } catch (refreshError) {
         // 네트워크 에러 등
         if (refreshError instanceof ApiClientError) {
-          // ApiClientError는 그대로 throw (리다이렉트 없이)
-          useAuthStore.getState().setAccessToken(null);
-          useAuthStore.getState().logout();
+          // ApiClientError (401 등)는 메모리에서만 제거 (localStorage는 유지)
+          if (refreshError.statusCode === 401) {
+            useAuthStore.getState().setAccessToken(null);
+            useAuthStore.getState().setUser(null);
+            // logout은 호출하지 않음 (localStorage 토큰 유지)
+          }
+          // 401이 아닌 ApiClientError는 토큰 유지하고 throw
           throw refreshError;
         }
-        // 네트워크 에러 등 기타 에러
-        console.error("Refresh token failed:", refreshError);
-        useAuthStore.getState().setAccessToken(null);
-        useAuthStore.getState().logout();
-        // 원래 요청의 401 에러를 그대로 throw (리다이렉트 없이)
+
+        // 네트워크 에러 등 기타 에러 - 토큰은 유지 (일시적 문제일 수 있음)
+        if (process.env.NODE_ENV === "development") {
+          console.warn("❌ [apiClient] Refresh token failed (network error?), keeping token:", refreshError);
+        }
+
+        // 네트워크 에러는 토큰을 유지하고 원래 401 에러를 throw
+        // 다음 요청 시 다시 refresh 시도 가능
         throw new ApiClientError("Session expired. Please log in again.", 401);
       }
     }

@@ -13,6 +13,7 @@ export const ROUTES = {
 } as const;
 
 export const JOB_STATUS = {
+  PREVIEWED: "previewed",
   PROCESSING: "processing",
   SUCCESS: "success",
   EXPIRED: "expired",

@@ -204,7 +204,7 @@ export default function ResultPage() {
               나중에 다시 받아볼 수 있어요.
             </p>
             <p className="mb-4 text-xs text-gray-600 sm:mb-5 sm:text-sm">
-              💾 <strong>Excel 파일만</strong> 저장됩니다 (CSV, PDF는 저장되지 않아요)
+              💾 로그인 시 변환 기록이 저장됩니다
             </p>
             <a
               href={getLoginUrl()}
