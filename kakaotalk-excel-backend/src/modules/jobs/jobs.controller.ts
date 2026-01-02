@@ -10,6 +10,7 @@ import {
   Res,
   ParseIntPipe,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -442,18 +443,57 @@ export class JobsController {
     @CurrentUser() user: User,
     @Res() res: Response,
   ) {
-    const buffer = await this.jobsService.downloadFile(jobId, user.id);
-    const job = await this.jobsService.findOne(jobId, user.id);
-    const fileName = job.originalFileName.replace('.txt', '.xlsx');
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    );
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${encodeURIComponent(fileName)}"`,
-    );
-    res.send(buffer);
+    // 사용자 정보 검증
+    if (!user) {
+      console.error('[downloadJob] User is undefined');
+      throw new BadRequestException('User information is missing');
+    }
+    if (!user.id) {
+      console.error('[downloadJob] User ID is missing', { user });
+      throw new BadRequestException('User ID is missing');
+    }
+
+    try {
+      console.log(
+        `[downloadJob] Downloading file for jobId: ${jobId}, userId: ${user.id}`,
+      );
+
+      // job 정보 먼저 가져오기 (파일명을 위해)
+      const job = await this.jobsService.findOne(jobId, user.id);
+      if (!job) {
+        console.error(`[downloadJob] Job not found: ${jobId}`);
+        throw new NotFoundException('Job not found');
+      }
+
+      // 파일 다운로드
+      const buffer = await this.jobsService.downloadFile(jobId, user.id);
+
+      const fileName = job.originalFileName.replace('.txt', '.xlsx');
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(fileName)}"`,
+      );
+
+      console.log(
+        `[downloadJob] File download successful - jobId: ${jobId}, fileName: ${fileName}, size: ${buffer.length} bytes`,
+      );
+      res.send(buffer);
+    } catch (error: unknown) {
+      console.error('[downloadJob] Error downloading file:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Failed to download file. Please try again later.',
+      );
+    }
   }
 
   @UseGuards(JwtAuthGuard)
