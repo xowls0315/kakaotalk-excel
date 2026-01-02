@@ -16,7 +16,8 @@ async function bootstrap() {
 
   // CORS 설정
   const frontendUrl = configService.get<string>('app.frontendUrl');
-  const nodeEnv = configService.get<string>('app.nodeEnv');
+  const isProduction =
+    configService.get<boolean>('app.isProduction') ?? false;
 
   // CORS 허용 origin 목록
   const allowedOrigins: string[] = [];
@@ -27,13 +28,13 @@ async function bootstrap() {
   }
 
   // 개발 환경: localhost 포트들 명시적으로 허용
-  if (nodeEnv === 'development' || !nodeEnv || nodeEnv === '') {
+  if (!isProduction) {
     allowedOrigins.push('http://localhost:3000');
     allowedOrigins.push('http://localhost:3001');
   }
 
   // 프로덕션 환경에서는 Swagger UI도 허용 (현재 서버 URL)
-  if (nodeEnv === 'production') {
+  if (isProduction) {
     allowedOrigins.push('https://kakaotalk-excel-backend.onrender.com');
     // 프로덕션에서도 localhost 허용 (프론트엔드 개발자가 로컬에서 테스트할 수 있도록)
     if (frontendUrl && frontendUrl.includes('localhost')) {
@@ -51,7 +52,7 @@ async function bootstrap() {
         callback(null, true);
       } else {
         // 개발 환경에서는 모든 origin 허용
-        if (nodeEnv === 'development' || !nodeEnv || nodeEnv === '') {
+        if (!isProduction) {
           callback(null, true);
         } else {
           // 프로덕션: 허용되지 않은 origin 거부
