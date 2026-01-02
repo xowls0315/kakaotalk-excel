@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import PreviewTable from "@/components/PreviewTable";
 import FiltersPanel from "@/components/FiltersPanel";
 import { useConvertStore, Message } from "@/store/useConvertStore";
-import { convertMessagesToExcel, convertMessagesToCSV } from "@/lib/excel";
+// import { convertMessagesToExcel, convertMessagesToCSV } from "@/lib/excel"; // 클라이언트 사이드 변환 (주석 처리)
+import { convertMessagesToCSV } from "@/lib/excel"; // CSV는 여전히 클라이언트 사이드
 import { convertMessagesToPDF } from "@/lib/pdf";
 import { parseKakaoTalkFile } from "@/lib/kakaotalkParser";
+import { convertToExcel } from "@/lib/api/convert";
+import { downloadBlob } from "@/lib/download";
 
 /* -------------------- Page -------------------- */
 export default function PreviewPage() {
@@ -34,7 +37,7 @@ export default function PreviewPage() {
     setFilteredMessages(parsed);
   }, [router, setMessages]);
 
-  const handleConvert = useCallback(() => {
+  const handleConvert = useCallback(async () => {
     if (filteredMessages.length === 0) {
       alert("아직 변환할 대화가 없어요 😢");
       return;
@@ -44,22 +47,69 @@ export default function PreviewPage() {
     try {
       const fileName =
         sessionStorage.getItem("uploadedFileName") ?? "kakaotalk-converted.txt";
-
       const baseFileName = fileName.replace(/\.txt$/i, "");
 
       if (downloadFormat === "xlsx") {
-        let excelFileName = baseFileName;
-        if (!excelFileName.toLowerCase().endsWith(".xlsx")) {
-          excelFileName += ".xlsx";
+        // ✅ 백엔드 API 사용: /convert/excel
+        try {
+          // sessionStorage에서 원본 파일 내용 가져오기
+          const fileContent = sessionStorage.getItem("uploadedFile");
+          if (!fileContent) {
+            throw new Error(
+              "원본 파일을 찾을 수 없습니다. 다시 업로드해주세요."
+            );
+          }
+
+          // File 객체 재생성
+          const file = new File([fileContent], fileName, {
+            type: "text/plain",
+          });
+
+          // 필터 옵션을 백엔드 API 형식에 맞게 변환
+          const { options } = useConvertStore.getState();
+          const convertOptions = {
+            includeSystem: !options.excludeSystemMessages, // excludeSystemMessages의 반대
+            splitSheetsByDay: false, // 필요시 옵션으로 추가 가능
+            dateFrom: options.dateStart
+              ? new Date(options.dateStart).toISOString().split("T")[0]
+              : undefined,
+            dateTo: options.dateEnd
+              ? new Date(options.dateEnd).toISOString().split("T")[0]
+              : undefined,
+            participants:
+              options.selectedParticipants &&
+              options.selectedParticipants.length > 0
+                ? options.selectedParticipants
+                : undefined,
+          };
+
+          // 백엔드 API 호출
+          const blob = await convertToExcel(file, convertOptions);
+
+          // 다운로드
+          let excelFileName = baseFileName;
+          if (!excelFileName.toLowerCase().endsWith(".xlsx")) {
+            excelFileName += ".xlsx";
+          }
+          downloadBlob(blob, excelFileName);
+        } catch (error) {
+          console.error("Excel conversion error:", error);
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "엑셀 변환 중에 문제가 생겼어요. 다시 시도해주세요 🙏";
+          alert(errorMessage);
+          return; // 에러 발생 시 여기서 종료
         }
-        convertMessagesToExcel(filteredMessages, excelFileName);
       } else if (downloadFormat === "csv") {
+        // CSV는 클라이언트 사이드에서 처리 (백엔드 API 없음)
         let csvFileName = baseFileName;
         if (!csvFileName.toLowerCase().endsWith(".csv")) {
           csvFileName += ".csv";
         }
         convertMessagesToCSV(filteredMessages, csvFileName);
       } else if (downloadFormat === "pdf") {
+        // PDF는 클라이언트 사이드에서 처리 (백엔드 API 없음)
         let pdfFileName = baseFileName;
         if (!pdfFileName.toLowerCase().endsWith(".pdf")) {
           pdfFileName += ".pdf";
@@ -67,9 +117,23 @@ export default function PreviewPage() {
         convertMessagesToPDF(filteredMessages, pdfFileName);
       }
 
+      // 기존 클라이언트 사이드 엑셀 변환 로직 (주석 처리)
+      // if (downloadFormat === "xlsx") {
+      //   let excelFileName = baseFileName;
+      //   if (!excelFileName.toLowerCase().endsWith(".xlsx")) {
+      //     excelFileName += ".xlsx";
+      //   }
+      //   convertMessagesToExcel(filteredMessages, excelFileName);
+      // }
+
       setTimeout(() => router.push("/result"), 500);
-    } catch {
-      alert("변환 중에 문제가 생겼어요. 다시 시도해주세요 🙏");
+    } catch (error) {
+      console.error("Convert error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "변환 중에 문제가 생겼어요. 다시 시도해주세요 🙏";
+      alert(errorMessage);
     } finally {
       setIsConverting(false);
     }
@@ -144,6 +208,11 @@ export default function PreviewPage() {
             PDF (.pdf)
           </button>
         </div>
+      </div>
+
+      {/* 저장 안내 */}
+      <div className="mb-6 rounded-lg border border-[#FBE27A] bg-[#FFF8D8] px-4 py-2 text-center text-xs text-gray-700 sm:text-sm">
+        💾 로그인 시 변환 기록은 <strong>Excel 파일만</strong> 저장됩니다
       </div>
 
       {/* Actions */}

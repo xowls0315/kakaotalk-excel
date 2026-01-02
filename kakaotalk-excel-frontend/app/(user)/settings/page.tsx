@@ -1,27 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useState } from "react";
 import { useConvertStore } from "@/store/useConvertStore";
-import { getSettings, updateSettings } from "@/lib/api/settings";
+import { updateSettings } from "@/lib/api/settings";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { useProtectedRoute } from "@/hooks/useProtectedRoute";
 
 export default function SettingsPage() {
-  const router = useRouter();
-  const { isAuthenticated, isLoading, checkAuthStatus } = useAuthStore();
+  const { isLoading } = useProtectedRoute();
   const { options, setOptions } = useConvertStore();
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    checkAuthStatus();
-  }, [checkAuthStatus]);
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push("/");
-    }
-  }, [isAuthenticated, isLoading, router]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -47,8 +36,8 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto max-w-4xl py-12 text-center">
-        <p className="text-gray-600">로딩 중...</p>
+      <div className="container mx-auto max-w-4xl py-12">
+        <LoadingSpinner message="로딩 중..." />
       </div>
     );
   }

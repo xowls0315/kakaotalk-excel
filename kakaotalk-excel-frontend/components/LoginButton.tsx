@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logout as apiLogout } from "@/lib/auth";
 
 export default function LoginButton() {
   const router = useRouter();
-  const { isAuthenticated, logout } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
 
   const handleLogin = () => {
     router.push("/login"); // ✅ 로그인 페이지로 이동
@@ -26,24 +27,41 @@ export default function LoginButton() {
 
   if (isAuthenticated) {
     return (
-      <button
-        onClick={handleLogout}
-        className="
-          rounded-md
-          border border-[#3FAF8E]
-          px-4 py-2
-          text-sm
-          font-medium
-          text-[#3FAF8E]
-          transition
-          hover:bg-[#EAF7F2]
-          dark:border-[#4FC3A1]
-          dark:text-[#4FC3A1]
-          dark:hover:bg-[#1E2621]
-        "
-      >
-        로그아웃
-      </button>
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-[#2F2F2F]">
+          {user?.name ? (
+            <>
+              <Link
+                href="/profile"
+                className="bg-yellow-100 px-1 rounded hover:bg-yellow-200 transition cursor-pointer"
+              >
+                {user.name}
+              </Link>{" "}
+              님 안녕하세요!
+            </>
+          ) : (
+            "안녕하세요!"
+          )}
+        </span>
+        <button
+          onClick={handleLogout}
+          className="
+            rounded-md
+            border border-[#3FAF8E]
+            px-4 py-2
+            text-sm
+            font-medium
+            text-[#3FAF8E]
+            transition
+            hover:bg-[#EAF7F2]
+            dark:border-[#4FC3A1]
+            dark:text-[#4FC3A1]
+            dark:hover:bg-[#1E2621]
+          "
+        >
+          로그아웃
+        </button>
+      </div>
     );
   }
 
