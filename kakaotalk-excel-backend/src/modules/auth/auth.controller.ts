@@ -113,6 +113,7 @@ export class AuthController {
       // 프론트엔드 URL 확인
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
 
+<<<<<<< HEAD
       // JSON 요청이거나 FRONTEND_URL이 없는 경우 JSON 반환
       if (isJsonRequest || !frontendUrl || frontendUrl.trim() === '') {
         return res.json({
@@ -168,6 +169,14 @@ export class AuthController {
               'GET /auth/me (Header: Authorization: Bearer YOUR_ACCESS_TOKEN)',
           },
         });
+=======
+      // FRONTEND_URL이 설정되어 있으면 항상 프론트엔드로 리다이렉트
+      if (frontendUrl && frontendUrl.trim() !== '') {
+        // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
+        return res.redirect(
+          `${frontendUrl}/auth/callback?token=${accessToken}`,
+        );
+>>>>>>> main
       }
 
       // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
