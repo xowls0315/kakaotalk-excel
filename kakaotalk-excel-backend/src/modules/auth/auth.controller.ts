@@ -65,13 +65,21 @@ export class AuthController {
       const user = req.user as User;
 
       if (!user) {
+        console.error('[kakaoCallback] User not found after authentication');
         throw new UnauthorizedException('User not found after authentication');
       }
 
+      console.log('[kakaoCallback] User authenticated:', {
+        id: user.id,
+        nickname: user.nickname,
+        email: user.email,
+      });
+
       const { accessToken, refreshToken } = await this.authService.login(user);
 
-      const nodeEnv = this.configService.get<string>('app.nodeEnv');
-      const isProduction = nodeEnv === 'production';
+      // 프로덕션 환경 감지 (NODE_ENV 또는 Render 환경 변수 체크)
+      const isProduction =
+        this.configService.get<boolean>('app.isProduction') ?? false;
 
       // Refresh Token을 쿠키에 저장 (개선된 설정)
       const cookieOptions = {
@@ -164,7 +172,14 @@ export class AuthController {
       // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
       return res.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
     } catch (error: unknown) {
-      console.error('Kakao callback error:', error);
+      console.error('[kakaoCallback] Error occurred:', error);
+
+      // 에러 상세 정보 로깅
+      if (error instanceof Error) {
+        console.error('[kakaoCallback] Error message:', error.message);
+        console.error('[kakaoCallback] Error stack:', error.stack);
+      }
+
       const frontendUrl = this.configService.get<string>('app.frontendUrl');
       const format = (req.query.format as string) || '';
 
@@ -176,6 +191,8 @@ export class AuthController {
         return res.status(500).json({
           success: false,
           error: errorMessage,
+          timestamp: new Date().toISOString(),
+          path: req.path,
         });
       }
 
