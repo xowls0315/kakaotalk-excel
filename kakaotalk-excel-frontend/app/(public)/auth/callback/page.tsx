@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { API_BASE_URL } from "@/lib/constants";
 import { User } from "@/lib/auth";
 import { claimJobs } from "@/lib/api/jobs";
+
+// OAuth 콜백 페이지는 프리렌더링되면 안 되므로
+// Client Component + useEffect로 클라이언트 사이드에서만 처리
+// useSearchParams 대신 window.location을 직접 사용하여 Suspense 경계 문제 방지
 
 interface BackendLoginResponse {
   success: boolean;
@@ -22,9 +26,10 @@ interface BackendLoginResponse {
 
 export default function AuthCallbackPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { checkAuthStatus, setUser, setAccessToken } = useAuthStore();
 
+  // 클라이언트 사이드에서만 실행되도록 useEffect 사용
+  // 프리렌더링 방지를 위해 모든 로직을 useEffect 내부에 배치
   useEffect(() => {
     const handleCallback = async () => {
       try {
@@ -111,9 +116,9 @@ export default function AuthCallbackPage() {
 
             // JSON 데이터 처리
             if (jsonData && jsonData.success && jsonData.accessToken) {
-              // 1. Access Token을 localStorage와 메모리에 저장
+              // 1. Access Token을 메모리에 저장
               setAccessToken(jsonData.accessToken);
-              console.log("✅ Access Token saved to localStorage and memory");
+              console.log("✅ Access Token saved to memory");
 
               // 2. Refresh Token은 HttpOnly Cookie로 자동 설정됨 (백엔드에서 처리)
               // credentials: "include"로 인해 자동으로 쿠키에 저장됨
@@ -146,6 +151,7 @@ export default function AuthCallbackPage() {
               }
 
               // 5. 프론트엔드 메인 페이지로 리다이렉트
+              // Vercel 배포 시: window.location.origin을 사용하여 자동으로 현재 도메인 감지
               const frontendUrl =
                 process.env.NEXT_PUBLIC_FRONTEND_URL ||
                 (typeof window !== "undefined"
@@ -153,7 +159,7 @@ export default function AuthCallbackPage() {
                       .replace(":3001", ":3000")
                       .replace(
                         "kakaotalk-excel-backend.onrender.com",
-                        "kakaotalk-excel-frontend.vercel.app"
+                        window.location.origin
                       )
                   : "http://localhost:3000");
 
@@ -172,7 +178,7 @@ export default function AuthCallbackPage() {
                       .replace(":3001", ":3000")
                       .replace(
                         "kakaotalk-excel-backend.onrender.com",
-                        "kakaotalk-excel-frontend.vercel.app"
+                        window.location.origin
                       )
                   : "http://localhost:3000");
               window.location.href = frontendUrl;
@@ -188,7 +194,7 @@ export default function AuthCallbackPage() {
                     .replace(":3001", ":3000")
                     .replace(
                       "kakaotalk-excel-backend.onrender.com",
-                      "kakaotalk-excel-frontend.vercel.app"
+                      window.location.origin
                     )
                 : "http://localhost:3000");
             window.location.href = frontendUrl;
@@ -197,9 +203,11 @@ export default function AuthCallbackPage() {
         }
 
         // 프론트엔드 URL인 경우: 기존 로직 (code 파라미터 처리)
-        const code = searchParams.get("code");
-        const error = searchParams.get("error");
-        const token = searchParams.get("token");
+        // window.location.search에서 직접 파싱하여 Suspense 경계 문제 방지
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get("code");
+        const error = urlParams.get("error");
+        const token = urlParams.get("token");
 
         if (error) {
           console.error("Auth error:", error);
@@ -297,7 +305,8 @@ export default function AuthCallbackPage() {
     };
 
     handleCallback();
-  }, [searchParams, router, checkAuthStatus, setUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 마운트 시 한 번만 실행 (window.location은 클라이언트에서만 접근 가능)
 
   return (
     <div className="container mx-auto max-w-2xl py-12 text-center">
