@@ -18,7 +18,9 @@ import { AuthSchedulerService } from './auth-scheduler.service';
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
         const accessSecret = configService.get<string>('jwt.accessSecret');
-        const accessExpiresIn = configService.get<string>('jwt.accessExpiresIn');
+        const accessExpiresIn = configService.get<string>(
+          'jwt.accessExpiresIn',
+        );
         if (!accessSecret || !accessExpiresIn) {
           throw new Error('JWT configuration is missing');
         }
@@ -38,4 +40,3 @@ import { AuthSchedulerService } from './auth-scheduler.service';
   exports: [AuthService],
 })
 export class AuthModule {}
-

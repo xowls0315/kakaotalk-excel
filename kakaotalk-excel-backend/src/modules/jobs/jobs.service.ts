@@ -194,14 +194,19 @@ export class JobsService {
 
       const storagePath =
         this.configService.get<string>('app.storagePath') || './uploads';
+      // 상대 경로를 절대 경로로 변환 (Render 환경 대응)
+      const resolvedStoragePath = path.resolve(storagePath);
       const expiresInDays =
         this.configService.get<number>('app.fileExpiresInDays') || 7;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-      await fs.mkdir(storagePath, { recursive: true });
+      await fs.mkdir(resolvedStoragePath, { recursive: true });
       const fileName = `${job.id}.xlsx`;
-      const filePath = path.join(storagePath, fileName);
+      const filePath = path.join(resolvedStoragePath, fileName);
+      console.log(
+        `[createExcel] Saving file to: ${filePath} (storagePath: ${storagePath}, resolved: ${resolvedStoragePath})`,
+      );
       await fs.writeFile(filePath, buffer);
 
       const jobFile = this.jobFileRepository.create({
@@ -227,45 +232,84 @@ export class JobsService {
   }
 
   async findUserJobs(userId: number, status?: string, page = 1, size = 20) {
-    console.log(
-      `[findUserJobs] Searching for jobs with userId: ${userId}, status: ${status || 'all'}`,
-    );
-    const query = this.jobRepository
-      .createQueryBuilder('job')
-      .leftJoinAndSelect('job.jobFiles', 'files')
-      .where('job.userId = :userId', { userId })
-      .orderBy('job.createdAt', 'DESC');
+    try {
+      // 입력 검증
+      if (!userId || typeof userId !== 'number' || userId <= 0) {
+        console.error('[findUserJobs] Invalid userId:', userId);
+        throw new BadRequestException('Invalid user ID');
+      }
 
-    if (status) {
-      query.andWhere('job.status = :status', { status });
-    }
+      if (page < 1) {
+        throw new BadRequestException('Page must be greater than 0');
+      }
 
-    const skip = (page - 1) * size;
-    const [jobs, total] = await query.skip(skip).take(size).getManyAndCount();
+      if (size < 1 || size > 100) {
+        throw new BadRequestException('Size must be between 1 and 100');
+      }
 
-    console.log(`[findUserJobs] Found ${total} jobs for userId: ${userId}`);
-    if (jobs.length > 0) {
       console.log(
-        `[findUserJobs] First job: id=${jobs[0].id}, userId=${jobs[0].userId}, status=${jobs[0].status}`,
+        `[findUserJobs] Searching for jobs with userId: ${userId}, status: ${status || 'all'}`,
+      );
+
+      const query = this.jobRepository
+        .createQueryBuilder('job')
+        .leftJoinAndSelect('job.jobFiles', 'files')
+        .where('job.userId = :userId', { userId })
+        .orderBy('job.createdAt', 'DESC');
+
+      if (status) {
+        // 상태 검증
+        const validStatuses = [
+          'previewed',
+          'processing',
+          'success',
+          'failed',
+          'expired',
+        ];
+        if (!validStatuses.includes(status)) {
+          throw new BadRequestException(
+            `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+          );
+        }
+        query.andWhere('job.status = :status', { status });
+      }
+
+      const skip = (page - 1) * size;
+      const [jobs, total] = await query.skip(skip).take(size).getManyAndCount();
+
+      console.log(`[findUserJobs] Found ${total} jobs for userId: ${userId}`);
+      if (jobs.length > 0) {
+        console.log(
+          `[findUserJobs] First job: id=${jobs[0].id}, userId=${jobs[0].userId}, status=${jobs[0].status}`,
+        );
+      }
+
+      return {
+        jobs: jobs.map((job) => ({
+          id: job.id,
+          originalFileName: job.originalFileName,
+          status: job.status,
+          roomName: job.roomName,
+          totalMessages: job.totalMessages,
+          createdAt: job.createdAt,
+          finishedAt: job.finishedAt,
+          hasFile: job.jobFiles && job.jobFiles.length > 0,
+          fileExpiresAt: job.jobFiles?.[0]?.expiresAt,
+        })),
+        total,
+        page,
+        size,
+      };
+    } catch (error) {
+      console.error('[findUserJobs] Error:', error);
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      // 데이터베이스 에러 등
+      throw new BadRequestException(
+        'Failed to retrieve jobs. Please try again later.',
       );
     }
-
-    return {
-      jobs: jobs.map((job) => ({
-        id: job.id,
-        originalFileName: job.originalFileName,
-        status: job.status,
-        roomName: job.roomName,
-        totalMessages: job.totalMessages,
-        createdAt: job.createdAt,
-        finishedAt: job.finishedAt,
-        hasFile: job.jobFiles && job.jobFiles.length > 0,
-        fileExpiresAt: job.jobFiles?.[0]?.expiresAt,
-      })),
-      total,
-      page,
-      size,
-    };
   }
 
   async findOne(jobId: string, userId?: number) {
@@ -301,35 +345,124 @@ export class JobsService {
   }
 
   async downloadFile(jobId: string, userId: number): Promise<Buffer> {
-    const job = await this.jobRepository.findOne({
-      where: { id: jobId },
-      relations: ['jobFiles'],
-    });
-
-    if (!job) {
-      throw new NotFoundException('Job not found');
-    }
-
-    if (userId && job.userId !== userId) {
-      throw new NotFoundException('Job not found');
-    }
-
-    if (!job.jobFiles || job.jobFiles.length === 0) {
-      throw new NotFoundException('File not found');
-    }
-
-    const jobFile = job.jobFiles[0];
-    if (new Date() > jobFile.expiresAt) {
-      job.status = JobStatus.EXPIRED;
-      await this.jobRepository.save(job);
-      throw new BadRequestException('File has expired');
-    }
-
     try {
-      const buffer = await fs.readFile(jobFile.pathOrUrl);
-      return buffer;
+      // 입력 검증
+      if (!jobId || typeof jobId !== 'string' || jobId.trim() === '') {
+        console.error('[downloadFile] Invalid jobId:', jobId);
+        throw new BadRequestException('Invalid job ID');
+      }
+
+      if (!userId || typeof userId !== 'number' || userId <= 0) {
+        console.error('[downloadFile] Invalid userId:', userId);
+        throw new BadRequestException('Invalid user ID');
+      }
+
+      console.log(
+        `[downloadFile] Searching for job: ${jobId}, userId: ${userId}`,
+      );
+
+      const job = await this.jobRepository.findOne({
+        where: { id: jobId },
+        relations: ['jobFiles'],
+      });
+
+      if (!job) {
+        console.error(`[downloadFile] Job not found: ${jobId}`);
+        throw new NotFoundException('Job not found');
+      }
+
+      console.log(
+        `[downloadFile] Job found - id: ${job.id}, userId: ${job.userId}, status: ${job.status}`,
+      );
+
+      // 사용자 권한 확인
+      if (job.userId !== userId) {
+        console.error(
+          `[downloadFile] User ${userId} does not have access to job ${jobId} (job.userId: ${job.userId})`,
+        );
+        throw new NotFoundException('Job not found');
+      }
+
+      if (!job.jobFiles || job.jobFiles.length === 0) {
+        console.error(`[downloadFile] No files found for job: ${jobId}`);
+        throw new NotFoundException('File not found');
+      }
+
+      const jobFile = job.jobFiles[0];
+      console.log(
+        `[downloadFile] File found - path: ${jobFile.pathOrUrl}, expiresAt: ${jobFile.expiresAt}`,
+      );
+
+      // 만료 확인
+      const now = new Date();
+      if (now > jobFile.expiresAt) {
+        console.error(
+          `[downloadFile] File expired - expiresAt: ${jobFile.expiresAt.toISOString()}, current: ${now.toISOString()}`,
+        );
+        job.status = JobStatus.EXPIRED;
+        await this.jobRepository.save(job);
+        throw new BadRequestException('File has expired');
+      }
+
+      // 파일 읽기
+      try {
+        // 상대 경로를 절대 경로로 변환
+        let filePath = jobFile.pathOrUrl;
+        if (!path.isAbsolute(filePath)) {
+          // 상대 경로인 경우 현재 작업 디렉토리 기준으로 절대 경로 변환
+          const storagePath =
+            this.configService.get<string>('app.storagePath') || './uploads';
+          const resolvedStoragePath = path.resolve(storagePath);
+          const fileName = path.basename(filePath);
+          filePath = path.join(resolvedStoragePath, fileName);
+          console.log(
+            `[downloadFile] Converted relative path to absolute: ${jobFile.pathOrUrl} -> ${filePath}`,
+          );
+        }
+
+        // 파일 존재 여부 확인
+        try {
+          await fs.access(filePath);
+          console.log(`[downloadFile] File exists at: ${filePath}`);
+        } catch (accessError) {
+          console.error(
+            `[downloadFile] File does not exist at: ${filePath}`,
+            accessError,
+          );
+          throw new NotFoundException(`File not found on disk: ${filePath}`);
+        }
+
+        console.log(`[downloadFile] Reading file from: ${filePath}`);
+        const buffer = await fs.readFile(filePath);
+        console.log(
+          `[downloadFile] File read successful - size: ${buffer.length} bytes`,
+        );
+        return buffer;
+      } catch (error) {
+        console.error(
+          `[downloadFile] Error reading file from disk: ${jobFile.pathOrUrl}`,
+          error,
+        );
+        if (error instanceof Error) {
+          console.error('[downloadFile] Error message:', error.message);
+          console.error('[downloadFile] Error stack:', error.stack);
+        }
+        if (error instanceof NotFoundException) {
+          throw error;
+        }
+        throw new NotFoundException('File not found on disk');
+      }
     } catch (error) {
-      throw new NotFoundException('File not found on disk');
+      console.error('[downloadFile] Error:', error);
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(
+        'Failed to download file. Please try again later.',
+      );
     }
   }
 
