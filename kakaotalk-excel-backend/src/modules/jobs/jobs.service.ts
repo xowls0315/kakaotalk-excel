@@ -194,14 +194,19 @@ export class JobsService {
 
       const storagePath =
         this.configService.get<string>('app.storagePath') || './uploads';
+      // 상대 경로를 절대 경로로 변환 (Render 환경 대응)
+      const resolvedStoragePath = path.resolve(storagePath);
       const expiresInDays =
         this.configService.get<number>('app.fileExpiresInDays') || 7;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
 
-      await fs.mkdir(storagePath, { recursive: true });
+      await fs.mkdir(resolvedStoragePath, { recursive: true });
       const fileName = `${job.id}.xlsx`;
-      const filePath = path.join(storagePath, fileName);
+      const filePath = path.join(resolvedStoragePath, fileName);
+      console.log(
+        `[createExcel] Saving file to: ${filePath} (storagePath: ${storagePath}, resolved: ${resolvedStoragePath})`,
+      );
       await fs.writeFile(filePath, buffer);
 
       const jobFile = this.jobFileRepository.create({
@@ -401,8 +406,34 @@ export class JobsService {
 
       // 파일 읽기
       try {
-        console.log(`[downloadFile] Reading file from: ${jobFile.pathOrUrl}`);
-        const buffer = await fs.readFile(jobFile.pathOrUrl);
+        // 상대 경로를 절대 경로로 변환
+        let filePath = jobFile.pathOrUrl;
+        if (!path.isAbsolute(filePath)) {
+          // 상대 경로인 경우 현재 작업 디렉토리 기준으로 절대 경로 변환
+          const storagePath =
+            this.configService.get<string>('app.storagePath') || './uploads';
+          const resolvedStoragePath = path.resolve(storagePath);
+          const fileName = path.basename(filePath);
+          filePath = path.join(resolvedStoragePath, fileName);
+          console.log(
+            `[downloadFile] Converted relative path to absolute: ${jobFile.pathOrUrl} -> ${filePath}`,
+          );
+        }
+
+        // 파일 존재 여부 확인
+        try {
+          await fs.access(filePath);
+          console.log(`[downloadFile] File exists at: ${filePath}`);
+        } catch (accessError) {
+          console.error(
+            `[downloadFile] File does not exist at: ${filePath}`,
+            accessError,
+          );
+          throw new NotFoundException(`File not found on disk: ${filePath}`);
+        }
+
+        console.log(`[downloadFile] Reading file from: ${filePath}`);
+        const buffer = await fs.readFile(filePath);
         console.log(
           `[downloadFile] File read successful - size: ${buffer.length} bytes`,
         );
@@ -415,6 +446,9 @@ export class JobsService {
         if (error instanceof Error) {
           console.error('[downloadFile] Error message:', error.message);
           console.error('[downloadFile] Error stack:', error.stack);
+        }
+        if (error instanceof NotFoundException) {
+          throw error;
         }
         throw new NotFoundException('File not found on disk');
       }
