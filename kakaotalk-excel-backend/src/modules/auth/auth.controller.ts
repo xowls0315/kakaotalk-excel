@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -325,8 +326,41 @@ export class AuthController {
     },
   })
   async logout(@CurrentUser() user: User, @Res() res: Response) {
-    await this.authService.logout(user.id);
-    res.clearCookie('refresh_token');
-    return res.json({ message: 'Logged out successfully' });
+    // 사용자 정보 검증
+    if (!user) {
+      console.error('[logout] User is undefined');
+      throw new UnauthorizedException('User information is missing');
+    }
+    if (!user.id) {
+      console.error('[logout] User ID is missing', { user });
+      throw new UnauthorizedException('User ID is missing');
+    }
+
+    try {
+      console.log('[logout] Logging out user:', user.id);
+      await this.authService.logout(user.id);
+
+      // 쿠키 삭제 (프로덕션 환경 고려)
+      const isProduction =
+        this.configService.get<boolean>('app.isProduction') ?? false;
+      res.clearCookie('refresh_token', {
+        httpOnly: true,
+        sameSite: isProduction ? ('none' as const) : ('lax' as const),
+        secure: isProduction,
+        path: '/',
+      });
+
+      console.log('[logout] Logout successful for user:', user.id);
+      return res.json({ message: 'Logged out successfully' });
+    } catch (error: unknown) {
+      console.error('[logout] Logout failed:', error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException('Logout failed. Please try again.');
+    }
   }
 }
