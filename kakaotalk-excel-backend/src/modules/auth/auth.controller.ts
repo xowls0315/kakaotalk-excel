@@ -74,12 +74,27 @@ export class AuthController {
       const isProduction = nodeEnv === 'production';
 
       // Refresh Token을 쿠키에 저장 (개선된 설정)
-      res.cookie('refresh_token', refreshToken, {
+      const cookieOptions = {
         httpOnly: true,
-        sameSite: isProduction ? 'none' : 'lax', // 프로덕션에서는 cross-site 쿠키 허용
+        sameSite: isProduction ? ('none' as const) : ('lax' as const), // 프로덕션에서는 cross-site 쿠키 허용
         secure: isProduction, // 프로덕션에서만 HTTPS 필수
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7일
         path: '/', // 모든 경로에서 쿠키 접근 가능
+      };
+
+      // 프로덕션에서는 domain을 명시하지 않음 (명시하면 쿠키가 저장되지 않을 수 있음)
+      // domain을 명시하지 않으면 현재 도메인에 자동으로 설정됨
+
+      res.cookie('refresh_token', refreshToken, cookieOptions);
+
+      // 디버깅용 로그
+      console.log('[kakaoCallback] Refresh token cookie set:', {
+        httpOnly: cookieOptions.httpOnly,
+        sameSite: cookieOptions.sameSite,
+        secure: cookieOptions.secure,
+        maxAge: cookieOptions.maxAge,
+        path: cookieOptions.path,
+        isProduction,
       });
 
       // 쿼리 파라미터로 JSON 응답 요청 확인 (백엔드 테스트용)
@@ -232,12 +247,48 @@ export class AuthController {
     description: 'Refresh Token이 없거나 유효하지 않음',
   })
   async refresh(@Req() req: Request) {
+    // 쿠키 읽기 (여러 방법 시도)
     const cookies = req.cookies as { refresh_token?: string } | undefined;
-    const refreshToken = cookies?.refresh_token;
+    let refreshToken = cookies?.refresh_token;
+
+    // 쿠키가 없으면 헤더에서 직접 읽기 시도 (디버깅용)
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token not found');
+      const cookieHeader = req.headers.cookie;
+      console.log('[refresh] Cookie header:', cookieHeader);
+      console.log('[refresh] Parsed cookies:', cookies);
+
+      // Cookie 헤더에서 직접 파싱 시도
+      if (cookieHeader) {
+        const cookiePairs = cookieHeader.split(';').map((c) => c.trim());
+        for (const pair of cookiePairs) {
+          const [key, value] = pair.split('=').map((s) => s.trim());
+          if (key === 'refresh_token') {
+            refreshToken = decodeURIComponent(value);
+            console.log('[refresh] Found refresh_token in cookie header');
+            break;
+          }
+        }
+      }
     }
-    return this.authService.refreshToken(refreshToken);
+
+    if (!refreshToken) {
+      console.error('[refresh] Refresh token not found in cookies');
+      console.error('[refresh] Request headers:', {
+        cookie: req.headers.cookie,
+        origin: req.headers.origin,
+        referer: req.headers.referer,
+      });
+      throw new UnauthorizedException('Refresh token not found in cookies');
+    }
+
+    try {
+      const result = await this.authService.refreshToken(refreshToken);
+      console.log('[refresh] Token refreshed successfully');
+      return result;
+    } catch (error) {
+      console.error('[refresh] Token refresh failed:', error);
+      throw error;
+    }
   }
 
   @Post('logout')
